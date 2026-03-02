@@ -2,125 +2,87 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Input, Card } from "@/src/components/common";
+import { Button, Input } from "@/src/components/common";
+import { mockUsers } from "@/src/data/mockUsers"; // Import data giả lập
 import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@test.com");
+  const [email, setEmail] = useState("admin@test.com"); // Để sẵn email test cho tiện
   const [password, setPassword] = useState("123456");
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!email.trim()) {
-      newErrors.email = "Email không được để trống";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = "Email không hợp lệ";
-    }
-
-    if (!password) {
-      newErrors.password = "Mật khẩu không được để trống";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      // Mock login - chỉ cần bất kỳ email/password nào
-      if (email && password) {
+      // Giả lập API gọi lên server mất 0.5s
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // TÌM USER TRONG KHO DỮ LIỆU
+      const user = mockUsers.find((u) => u.email === email);
+
+      if (user) {
+        // LƯU Ý QUAN TRỌNG: Lưu TOÀN BỘ thông tin (có cả id là "1", "2"...) vào localStorage
+        localStorage.setItem("user", JSON.stringify(user));
         toast.success("Đăng nhập thành công!");
-        localStorage.setItem("user", JSON.stringify({ email, role: "ADMIN" }));
+
+        // Đăng nhập xong đẩy vào dashboard
         router.push("/dashboard");
+      } else {
+        toast.error("Tài khoản không tồn tại trong hệ thống!");
       }
-    } catch (error) {
-      toast.error("Có lỗi xảy ra, vui lòng thử lại");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <Card className="shadow-lg">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-              🗳️
-            </h1>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-              Hệ thống kiểm phiếu
-            </h2>
-            <p className="text-gray-600 text-sm md:text-base">
-              Đăng nhập để bắt đầu
-            </p>
+    <div className="min-h-screen flex items-center justify-center bg-blue-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl">
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+            <span className="text-2xl">🗳️</span>
           </div>
+          <h2 className="text-3xl font-extrabold text-gray-900">
+            Hệ thống kiểm phiếu
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">Đăng nhập để bắt đầu</p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+          <div className="space-y-4">
             <Input
               label="Email"
               type="email"
+              required
               value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (errors.email) {
-                  setErrors({ ...errors, email: "" });
-                }
-              }}
-              error={errors.email}
-              placeholder="your@email.com"
-              disabled={isLoading}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@test.com"
             />
-
             <Input
               label="Mật khẩu"
               type="password"
+              required
               value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (errors.password) {
-                  setErrors({ ...errors, password: "" });
-                }
-              }}
-              error={errors.password}
-              placeholder="••••••••"
-              disabled={isLoading}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••"
             />
-
-            <Button
-              type="submit"
-              fullWidth
-              size="md"
-              isLoading={isLoading}
-              disabled={isLoading}
-            >
-              Đăng nhập
-            </Button>
-          </form>
-
-          <div className="mt-6 pt-6 border-t border-gray-200 text-center text-xs md:text-sm text-gray-600">
-            <p className="font-semibold mb-2">📝 Tài khoản Demo:</p>
-            <p>
-              Email:{" "}
-              <span className="font-mono text-gray-900">admin@test.com</span>
-            </p>
-            <p>
-              Mật khẩu: <span className="font-mono text-gray-900">123456</span>
-            </p>
           </div>
-        </Card>
+
+          <Button type="submit" fullWidth size="lg" isLoading={isLoading}>
+            Đăng nhập
+          </Button>
+
+          {/* Hướng dẫn test nhanh */}
+          <div className="mt-6 pt-4 border-t border-gray-100 text-center text-sm text-gray-500">
+            <p className="font-semibold text-gray-700 mb-2">Tài khoản Demo:</p>
+            <p>Admin: admin@test.com</p>
+            <p>Kiểm phiếu: auditor1@test.com</p>
+            <p>(Mật khẩu nhập bừa vì đang test)</p>
+          </div>
+        </form>
       </div>
     </div>
   );

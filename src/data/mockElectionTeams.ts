@@ -11,7 +11,8 @@ export interface Ballot {
   id: string;
   name: string;
   level: ElectionLevel;
-  candidates: Candidate[];
+  // Thêm dấu "?" ở đây để TypeScript hiểu rằng lúc khởi tạo có thể chưa có ứng viên ngay
+  candidates?: Candidate[]; 
 }
 
 export interface ElectionTeam {
@@ -22,87 +23,49 @@ export interface ElectionTeam {
   createdAt: Date;
 }
 
-export const mockElectionTeams: ElectionTeam[] = [
-  {
-    id: "team-1",
-    name: "Tổ bầu cử số 1 - Phường A, Quận Ba Đình",
-    ballots: [
-      {
-        id: "ballot-1",
-        name: "Bầu cử Quốc Hội 2026",
-        level: "QUOCHOI",
-        candidates: [
-          { id: "c1", name: "Nguyễn Văn A", birthYear: 1975, gender: "Nam" },
-          { id: "c2", name: "Trần Thị B", birthYear: 1980, gender: "Nữ" },
-          { id: "c3", name: "Lê Văn C", birthYear: 1978, gender: "Nam" },
-        ],
-      },
-      {
-        id: "ballot-2",
-        name: "Bầu cử HĐND TP Hà Nội khoá XVI",
-        level: "THANHPHO",
-        candidates: [
-          { id: "c4", name: "Phạm Văn D", birthYear: 1985, gender: "Nam" },
-          { id: "c5", name: "Hoàng Thị E", birthYear: 1990, gender: "Nữ" },
-        ],
-      },
-    ],
-    auditorIds: ["2", "3"],
-    createdAt: new Date("2026-02-01"),
-  },
-  {
-    id: "team-2",
-    name: "Tổ bầu cử số 2 - Phường B, Quận Hoàn Kiếm",
-    ballots: [
-      {
-        id: "ballot-3",
-        name: "Bầu cử Quốc Hội 2026",
-        level: "QUOCHOI",
-        candidates: [
-          { id: "c6", name: "Vũ Văn F", birthYear: 1970, gender: "Nam" },
-          { id: "c7", name: "Đặng Thị G", birthYear: 1982, gender: "Nữ" },
-        ],
-      },
-      {
-        id: "ballot-4",
-        name: "Bầu cử HĐND Xã Tây Hồ",
-        level: "XA",
-        candidates: [],
-      },
-    ],
-    auditorIds: ["3", "5"],
-    createdAt: new Date("2026-02-05"),
-  },
-];
-
+// 1. KHO DANH SÁCH BẦU CỬ (Có sẵn dữ liệu ứng viên cực chuẩn để test)
 export const mockAvailableBallots: Ballot[] = [
   {
-    id: "ballot-1",
+    id: "ballot-qh",
     name: "Bầu cử Quốc Hội 2026",
     level: "QUOCHOI",
     candidates: [
-      { id: "c1", name: "Nguyễn Văn A", birthYear: 1975, gender: "Nam" },
-      { id: "c2", name: "Trần Thị B", birthYear: 1980, gender: "Nữ" },
+      { id: "c1", name: "Nguyễn Phú Trọng", birthYear: 1944, gender: "Nam" },
+      { id: "c2", name: "Tô Lâm", birthYear: 1957, gender: "Nam" },
+      { id: "c3", name: "Võ Thị Ánh Xuân", birthYear: 1970, gender: "Nữ" },
     ],
   },
   {
-    id: "ballot-2",
+    id: "ballot-tp",
     name: "Bầu cử HĐND TP Hà Nội khoá XVI",
     level: "THANHPHO",
     candidates: [
-      { id: "c3", name: "Lê Văn C", birthYear: 1978, gender: "Nam" },
+      { id: "c4", name: "Trần Sỹ Thanh", birthYear: 1971, gender: "Nam" },
+      { id: "c5", name: "Nguyễn Thị Tuyến", birthYear: 1971, gender: "Nữ" },
     ],
   },
   {
-    id: "ballot-3",
-    name: "Bầu cử HĐND Xã Tây Hồ",
+    id: "ballot-xa",
+    name: "Bầu cử HĐND Xã Phương Viên",
     level: "XA",
-    candidates: [],
+    candidates: [
+      { id: "c6", name: "Nguyễn Phạm Khắc Hà", birthYear: 2000, gender: "Nam" },
+      { id: "c7", name: "Trần Văn A", birthYear: 1985, gender: "Nam" },
+    ],
   },
+];
+
+// 2. KHO TỔ BẦU CỬ (Đã đặc cách thêm ID "1" của Admin để bạn xem được luôn)
+export const mockElectionTeams: ElectionTeam[] = [
   {
-    id: "ballot-4",
-    name: "Bầu cử HĐND Huyện Hoài Đức",
-    level: "THANHPHO",
-    candidates: [],
-  },
+    id: "team-1",
+    name: "Tổ bầu cử số 1 - Xã Phương Viên",
+    ballots: [
+      mockAvailableBallots[0], // Tự động lấy phiếu Quốc hội
+      mockAvailableBallots[1], // Tự động lấy phiếu TP
+      mockAvailableBallots[2], // Tự động lấy phiếu Xã
+    ],
+    auditorIds: ["1", "2", "3"], // ID "1" là của admin@test.com
+    createdAt: new Date("2026-02-01"),
+  }
 ];
