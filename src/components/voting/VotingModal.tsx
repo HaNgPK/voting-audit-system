@@ -254,7 +254,7 @@ export const VotingModal: React.FC<VotingModalProps> = ({
               onClick={() => setIsConfirming(false)}
               disabled={isSubmitting}
             >
-              Hủy bỏ
+              Hủy
             </Button>
             <Button
               type="button"
