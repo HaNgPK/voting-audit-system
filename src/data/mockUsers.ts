@@ -2,6 +2,7 @@ export interface MockUser {
   id: string;
   email: string;
   name: string;
+  address?: string;
   role: "ADMIN" | "AUDITOR" | "VIEWER";
   createdAt: Date;
 }
