@@ -9,8 +9,15 @@ export default function HeaderMenu() {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Hiển thị nút Back nếu không ở trang chủ
-  const showBack = pathname !== "/dashboard" && pathname !== "/";
+  // 👇 LOGIC ẨN HEADER: Nếu đang ở trang login hoặc trang chủ gốc thì không render Header
+  const hideHeaderRoutes = ["/auth/login", "/"];
+
+  // FIX Ở ĐÂY: Thêm check !pathname hoặc dùng (pathname || "")
+  if (!pathname || hideHeaderRoutes.includes(pathname)) {
+    return null;
+  }
+  // Hiển thị nút Back nếu không ở trang chủ dashboard
+  const showBack = pathname !== "/dashboard";
 
   // Logout
   const handleLogout = () => {
