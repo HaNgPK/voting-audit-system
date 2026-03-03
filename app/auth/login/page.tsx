@@ -39,44 +39,58 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-blue-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-            <span className="text-2xl">🗳️</span>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0f4f7f] via-[#1a3a5c] to-[#c41e3a] py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-2xl animate-fade-in-up">
+        <div className="text-center animate-fade-in" style={{ animationDelay: "0.1s" }}>
+          <div className="mx-auto h-14 w-14 bg-blue-100 rounded-full flex items-center justify-center mb-4 shadow">
+            <span className="text-3xl">🗳️</span>
           </div>
           <h2 className="text-3xl font-extrabold text-gray-900">
             Hệ thống kiểm phiếu
           </h2>
-          <p className="mt-2 text-sm text-gray-600">Đăng nhập để bắt đầu</p>
+          <p className="mt-2 text-sm text-gray-500">Đăng nhập để bắt đầu</p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="space-y-4">
-            <Input
-              label="Email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@test.com"
-            />
-            <Input
-              label="Mật khẩu"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••"
-            />
+            <div className="animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+              <Input
+                label="Email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@test.com"
+              />
+            </div>
+            <div className="animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
+              <Input
+                label="Mật khẩu"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••"
+              />
+            </div>
           </div>
 
-          <Button type="submit" fullWidth size="lg" isLoading={isLoading}>
-            Đăng nhập
-          </Button>
+          <div className="animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+            <Button
+              type="submit"
+              fullWidth
+              size="lg"
+              isLoading={isLoading}
+            >
+              Đăng nhập
+            </Button>
+          </div>
 
           {/* Hướng dẫn test nhanh */}
-          <div className="mt-6 pt-4 border-t border-gray-100 text-center text-sm text-gray-500">
+          <div
+            className="mt-6 pt-4 border-t border-gray-100 text-center text-sm text-gray-500 animate-fade-in"
+            style={{ animationDelay: "0.5s" }}
+          >
             <p className="font-semibold text-gray-700 mb-2">Tài khoản Demo:</p>
             <p>Admin: admin@test.com</p>
             <p>Kiểm phiếu: auditor1@test.com</p>
