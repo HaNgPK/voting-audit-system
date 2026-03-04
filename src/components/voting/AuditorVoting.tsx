@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/src/hooks/useSession";
 import { useElectionTeamsMock } from "@/src/hooks/useElectionTeamsMock";
@@ -13,8 +13,14 @@ export const AuditorVoting: React.FC = () => {
   const router = useRouter();
   const { user, isLoading: sessionLoading } = useSession();
   const { teams } = useElectionTeamsMock();
-  const { phases, isLoading, createPhase, recordVote, completePhase } =
-    useVotingPhases();
+  const {
+    phases,
+    isLoading,
+    createPhase,
+    toggleCandidateInTicket,
+    completeTicket,
+    completePhase,
+  } = useVotingPhases();
 
   const [activePhaseId, setActivePhaseId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,6 +38,17 @@ export const AuditorVoting: React.FC = () => {
     if (!activePhase || !myTeam) return null;
     return myTeam.ballots.find((b) => b.id === activePhase.ballotId);
   }, [activePhase, myTeam]);
+
+  // Các phiên đã hoàn tất của user này
+  const myCompletedPhases = useMemo(() => {
+    return phases.filter(
+      (p) => p.auditorId === String(user?.id || "") && p.status === "COMPLETED",
+    );
+  }, [phases, user]);
+
+  const myTotalBallotCount = useMemo(() => {
+    return myCompletedPhases.reduce((sum, p) => sum + (p.ballotCount || 0), 0);
+  }, [myCompletedPhases]);
 
   if (sessionLoading || isLoading) {
     return (
@@ -76,9 +93,15 @@ export const AuditorVoting: React.FC = () => {
     }
   };
 
-  const handleVote = (candidateId: string) => {
+  const handleToggleCandidate = (candidateId: string) => {
     if (activePhaseId) {
-      recordVote(activePhaseId, candidateId);
+      toggleCandidateInTicket(activePhaseId, candidateId);
+    }
+  };
+
+  const handleCompleteTicket = () => {
+    if (activePhaseId) {
+      completeTicket(activePhaseId);
     }
   };
 
@@ -116,6 +139,9 @@ export const AuditorVoting: React.FC = () => {
           auditorId={String(user?.id || "")}
           onStartPhase={handleStartPhase}
           isLoading={isSubmitting}
+          completedPhasesCount={myCompletedPhases.length}
+          totalBallotCount={myTotalBallotCount}
+          phases={phases.filter((p) => p.auditorId === String(user?.id || ""))}
         />
       </div>
     );
@@ -127,7 +153,8 @@ export const AuditorVoting: React.FC = () => {
       <ActivePhaseVoting
         phase={activePhase}
         ballot={activeBallot}
-        onVote={handleVote}
+        onToggleCandidate={handleToggleCandidate}
+        onCompleteTicket={handleCompleteTicket}
         onComplete={handleCompletePhase}
         onCancel={handleCancelPhase}
         isSubmitting={isSubmitting}

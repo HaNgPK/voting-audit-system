@@ -6,13 +6,15 @@ export interface VotingPhase {
   auditorId: string;
   level: "QUOCHOI" | "THANHPHO" | "XA";
   ballotId: string;
-  votes: Record<string, number>; // candidateId => count
-  totalVotes: number;
+  votes: Record<string, number>; // candidateId => tổng số phiếu bầu
+  totalVotes: number; // tổng số lượt bầu tất cả ứng viên
+  ballotCount: number; // số tờ phiếu đã hoàn tất
+  currentTicketVotes: Record<string, number>; // ứng viên đang chọn trong phiếu hiện tại
   startTime: Date;
   endTime?: Date;
   status: "ACTIVE" | "COMPLETED";
   mode: AssignmentMode;
-  quota?: number; // Nếu FIXED_QUOTA
+  quota?: number; // Nếu FIXED_QUOTA: số tờ phiếu cần kiểm
 }
 
 export const mockVotingPhases: VotingPhase[] = [
@@ -28,6 +30,8 @@ export const mockVotingPhases: VotingPhase[] = [
       c3: 5,
     },
     totalVotes: 23,
+    ballotCount: 5,
+    currentTicketVotes: {},
     startTime: new Date("2026-03-01 08:00"),
     endTime: new Date("2026-03-01 12:00"),
     status: "COMPLETED",

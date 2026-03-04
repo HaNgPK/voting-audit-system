@@ -35,6 +35,8 @@ export const useVotingPhases = () => {
         ballotId: data.ballotId,
         votes: {},
         totalVotes: 0,
+        ballotCount: 0, // số phiếu (tờ phiếu) đã hoàn tất
+        currentTicketVotes: {}, // các ứng viên đang được chọn trong phiếu hiện tại
         startTime: new Date(),
         status: "ACTIVE",
         mode: data.mode,
@@ -47,23 +49,50 @@ export const useVotingPhases = () => {
     [],
   );
 
-  // Tích chọn ứng viên = tăng 1 phiếu
-  const recordVote = useCallback((phaseId: string, candidateId: string) => {
+  // Toggle chọn/bỏ chọn ứng viên trong phiếu hiện tại
+  const toggleCandidateInTicket = useCallback(
+    (phaseId: string, candidateId: string) => {
+      setPhases((prev) =>
+        prev.map((phase) => {
+          if (phase.id === phaseId && phase.status === "ACTIVE") {
+            const currentTicket = { ...(phase.currentTicketVotes || {}) };
+            if (currentTicket[candidateId]) {
+              delete currentTicket[candidateId];
+            } else {
+              currentTicket[candidateId] = 1;
+            }
+            return { ...phase, currentTicketVotes: currentTicket };
+          }
+          return phase;
+        }),
+      );
+    },
+    [],
+  );
+
+  // Hoàn tất 1 phiếu (tờ phiếu) — cộng phiếu vào tổng, reset phiếu hiện tại
+  const completeTicket = useCallback((phaseId: string) => {
     setPhases((prev) =>
       prev.map((phase) => {
         if (phase.id === phaseId && phase.status === "ACTIVE") {
+          const currentTicket = phase.currentTicketVotes || {};
           const newVotes = { ...phase.votes };
-          newVotes[candidateId] = (newVotes[candidateId] || 0) + 1;
+          Object.keys(currentTicket).forEach((candidateId) => {
+            newVotes[candidateId] = (newVotes[candidateId] || 0) + 1;
+          });
           const totalVotes = Object.values(newVotes).reduce((a, b) => a + b, 0);
           return {
             ...phase,
             votes: newVotes,
             totalVotes,
+            ballotCount: (phase.ballotCount || 0) + 1,
+            currentTicketVotes: {}, // reset phiếu hiện tại
           };
         }
         return phase;
       }),
     );
+    toast.success("Đã hoàn tất phiếu");
   }, []);
 
   // Hoàn thành phiên
@@ -72,17 +101,16 @@ export const useVotingPhases = () => {
       const phase = phases.find((p) => p.id === phaseId);
       if (!phase) return false;
 
-      // FIXED_QUOTA: phải kiểm đủ số lượng
+      // FIXED_QUOTA: phải kiểm đủ số phiếu (tờ)
       if (phase.mode === "FIXED_QUOTA" && phase.quota) {
-        if (phase.totalVotes !== phase.quota) {
+        if ((phase.ballotCount || 0) !== phase.quota) {
           toast.error(
-            `Phải kiểm đủ ${phase.quota} phiếu. Hiện tại: ${phase.totalVotes}`,
+            `Phải kiểm đủ ${phase.quota} phiếu. Hiện tại: ${phase.ballotCount || 0}`,
           );
           return false;
         }
       }
 
-      // UNLIMITED: có thể hoàn thành bất kỳ lúc nào
       setPhases((prev) =>
         prev.map((p) =>
           p.id === phaseId
@@ -100,7 +128,8 @@ export const useVotingPhases = () => {
     phases,
     isLoading,
     createPhase,
-    recordVote,
+    toggleCandidateInTicket,
+    completeTicket,
     completePhase,
   };
 };

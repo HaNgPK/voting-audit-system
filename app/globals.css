@@ -63,6 +63,28 @@ body {
   }
 }
 
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -72,38 +94,128 @@ body {
   }
 }
 
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .animate-fadeInDown {
-  animation: fadeInDown 0.6s ease-out forwards;
+  animation: fadeInDown 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .animate-fadeInUp {
-  animation: fadeInUp 0.6s ease-out forwards;
+  animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-fadeInLeft {
+  animation: fadeInLeft 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-fadeInRight {
+  animation: fadeInRight 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.6s ease-out forwards;
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-countUp {
+  animation: countUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* initial hidden state for stagger animations */
+.opacity-0-init {
+  opacity: 0;
+}
+
+.animation-delay-50 {
+  animation-delay: 50ms;
 }
 
 .animation-delay-100 {
   animation-delay: 100ms;
 }
 
+.animation-delay-150 {
+  animation-delay: 150ms;
+}
+
 .animation-delay-200 {
   animation-delay: 200ms;
+}
+
+.animation-delay-250 {
+  animation-delay: 250ms;
 }
 
 .animation-delay-300 {
   animation-delay: 300ms;
 }
 
+.animation-delay-350 {
+  animation-delay: 350ms;
+}
+
 .animation-delay-400 {
   animation-delay: 400ms;
+}
+
+.animation-delay-450 {
+  animation-delay: 450ms;
 }
 
 .animation-delay-500 {
   animation-delay: 500ms;
 }
 
+.animation-delay-550 {
+  animation-delay: 550ms;
+}
+
 .animation-delay-600 {
   animation-delay: 600ms;
+}
+
+.animation-delay-700 {
+  animation-delay: 700ms;
+}
+
+.animation-delay-800 {
+  animation-delay: 800ms;
 }
