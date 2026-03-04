@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Button,
-  Card,
-  Modal,
-  Input,
-  Select,
-  Table,
-} from "@/src/components/common";
+import { Card, Modal, Input, Select, Button } from "@/src/components/common";
 import {
   mockAvailableBallots,
   type Ballot,
@@ -16,6 +9,7 @@ import {
   type Candidate,
 } from "@/src/data/mockElectionTeams";
 import toast from "react-hot-toast";
+import { Pencil, Trash2, Plus, Search, Users } from "lucide-react";
 
 const LEVEL_OPTIONS = [
   { value: "QUOCHOI", label: "🏛️ Quốc Hội" },
@@ -27,6 +21,7 @@ export const BallotManagement: React.FC = () => {
   const [ballots, setBallots] = useState<Ballot[]>([...mockAvailableBallots]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBallot, setEditingBallot] = useState<Ballot | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     level: "QUOCHOI" as ElectionLevel,
@@ -113,7 +108,7 @@ export const BallotManagement: React.FC = () => {
       }),
     );
     toast.success("Thêm ứng viên thành công!");
-    const nextIndex = ((managingBallot?.candidates || []).length || 0) + 1;
+    const nextIndex = ((managingBallot?.candidates || []).length || 0) + 2;
     setCandidateForm({
       name: "",
       birthYear: "",
@@ -145,58 +140,128 @@ export const BallotManagement: React.FC = () => {
     toast.success("Xóa danh sách thành công!");
   };
 
+  const filteredBallots = ballots.filter((b) =>
+    b.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
   return (
-    <Card className="p-4 sm:p-6 mb-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          📋 Quản lý Danh sách bầu cử
-        </h2>
-        <Button onClick={() => handleOpenModal()} variant="success">
-          ➕ Thêm danh sách
-        </Button>
+    <Card className="p-0 overflow-hidden animate-fadeInUp">
+      {/* Header */}
+      <div className="px-6 py-5 border-b border-gray-100">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Quản lý Danh sách bầu cử
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Tạo và quản lý danh sách bầu cử, ứng cử viên
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Tìm kiếm..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all w-44"
+              />
+            </div>
+            <button
+              onClick={() => handleOpenModal()}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              Thêm danh sách
+            </button>
+          </div>
+        </div>
       </div>
 
+      {/* Table */}
       <div className="overflow-x-auto">
-        <Table
-          headers={["Tên danh sách", "Cấp độ", "Số ứng cử viên", "Thao tác"]}
-          rows={ballots.map((b) => [
-            <span key={b.id} className="font-medium text-gray-800">
-              {b.name}
-            </span>,
-            LEVEL_OPTIONS.find((l) => l.value === b.level)?.label || b.level,
-            <span
-              key={`count-${b.id}`}
-              className="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm font-semibold"
-            >
-              {b.candidates?.length || 0} người
-            </span>,
-          ])}
-          actions={(rowIdx) => (
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => handleOpenCandidateModal(ballots[rowIdx])}
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gray-50/80 border-b border-gray-200">
+              {["Tên danh sách", "Cấp độ", "Ứng cử viên", "Thao tác"].map(
+                (h) => (
+                  <th
+                    key={h}
+                    className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                  >
+                    {h}
+                  </th>
+                ),
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {filteredBallots.map((ballot, idx) => (
+              <tr
+                key={ballot.id}
+                className="hover:bg-blue-50/40 transition-colors duration-150 animate-fadeInUp"
+                style={{ animationDelay: `${idx * 40}ms` }}
               >
-                👥 Ứng viên
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => handleOpenModal(ballots[rowIdx])}
-              >
-                ✏️ Sửa
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => handleDeleteBallot(ballots[rowIdx].id)}
-              >
-                🗑️ Xóa
-              </Button>
-            </div>
-          )}
-        />
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="font-medium text-gray-900 text-sm">
+                    {ballot.name}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm text-gray-600">
+                    {LEVEL_OPTIONS.find((l) => l.value === ballot.level)
+                      ?.label || ballot.level}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <button
+                    onClick={() => handleOpenCandidateModal(ballot)}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold hover:bg-blue-100 transition-colors cursor-pointer"
+                  >
+                    <Users className="w-3 h-3" />
+                    {ballot.candidates?.length || 0} người
+                  </button>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => handleOpenCandidateModal(ballot)}
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 active:scale-90"
+                      title="Quản lý ứng viên"
+                    >
+                      <Users className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleOpenModal(ballot)}
+                      className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all duration-200 active:scale-90"
+                      title="Chỉnh sửa"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteBallot(ballot.id)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 active:scale-90"
+                      title="Xóa"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {filteredBallots.length === 0 && (
+              <tr>
+                <td
+                  colSpan={4}
+                  className="px-6 py-12 text-center text-gray-400 text-sm"
+                >
+                  Không tìm thấy danh sách bầu cử nào
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Modal Tạo/Sửa Danh sách */}
@@ -245,13 +310,16 @@ export const BallotManagement: React.FC = () => {
         title={`👥 Ứng viên: ${managingBallot?.name}`}
         size="lg"
       >
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Form Thêm Ứng viên */}
           <form
             onSubmit={handleAddCandidate}
-            className="bg-gray-50 p-4 rounded-lg border border-gray-200 grid grid-cols-1 sm:grid-cols-5 gap-3 items-end"
+            className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3"
           >
-            <div className="sm:col-span-2">
+            <p className="text-sm font-semibold text-gray-700">
+              Thêm ứng cử viên
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
                 label="Họ và tên"
                 value={candidateForm.name}
@@ -260,8 +328,6 @@ export const BallotManagement: React.FC = () => {
                 }
                 placeholder="Nhập tên ứng cử viên"
               />
-            </div>
-            <div>
               <Input
                 label="Năm sinh"
                 type="number"
@@ -274,8 +340,6 @@ export const BallotManagement: React.FC = () => {
                 }
                 placeholder="1980"
               />
-            </div>
-            <div>
               <Input
                 label="Số thứ tự"
                 type="number"
@@ -289,51 +353,72 @@ export const BallotManagement: React.FC = () => {
                 min="1"
               />
             </div>
-            <div className="sm:col-span-5 flex justify-end gap-2">
-              <Button type="submit" variant="primary">
-                ➕ Thêm
+            <div className="flex justify-end">
+              <Button type="submit" variant="primary" size="sm">
+                <span className="flex items-center gap-1">
+                  <Plus className="w-4 h-4" /> Thêm
+                </span>
               </Button>
             </div>
           </form>
 
           {/* Danh sách Ứng viên */}
-          <div className="border rounded-lg overflow-hidden">
+          <div>
+            <p className="text-sm font-semibold text-gray-700 mb-2">
+              Danh sách ({(managingBallot?.candidates || []).length} ứng viên)
+            </p>
             {(managingBallot?.candidates || []).length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
-                Chưa có ứng cử viên nào. Hãy thêm ứng cử viên ở trên.
+              <div className="text-center py-8 text-gray-400 text-sm">
+                Chưa có ứng cử viên nào. Hãy thêm ở trên.
               </div>
             ) : (
-              <div className="max-h-[350px] overflow-y-auto">
-                <Table
-                  headers={["STT", "Họ và tên", "Năm sinh", "Hành động"]}
-                  rows={(managingBallot?.candidates || []).map((c) => [
-                    <span key={`idx-${c.id}`} className="font-semibold">
-                      {c.index}
-                    </span>,
-                    <span key={c.id} className="font-semibold text-gray-800">
-                      {c.name}
-                    </span>,
-                    <span key={`birth-${c.id}`}>{c.birthYear}</span>,
-                  ])}
-                  actions={(rowIdx) => (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() =>
-                        handleDeleteCandidate(
-                          (managingBallot?.candidates || [])[rowIdx].id,
-                        )
-                      }
-                    >
-                      🗑️ Xóa
-                    </Button>
-                  )}
-                />
+              <div className="max-h-[300px] overflow-y-auto border rounded-lg">
+                <table className="w-full">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      {["STT", "Họ và tên", "Năm sinh", ""].map((h) => (
+                        <th
+                          key={h}
+                          className="px-4 py-2 text-left text-xs font-semibold text-gray-500"
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {(managingBallot?.candidates || []).map((c) => (
+                      <tr
+                        key={c.id}
+                        className="hover:bg-blue-50/40 transition-colors"
+                      >
+                        <td className="px-4 py-2 text-sm font-semibold text-gray-600">
+                          {c.index}
+                        </td>
+                        <td className="px-4 py-2 text-sm font-medium text-gray-800">
+                          {c.name}
+                        </td>
+                        <td className="px-4 py-2 text-sm text-gray-600">
+                          {c.birthYear}
+                        </td>
+                        <td className="px-4 py-2 text-right">
+                          <button
+                            onClick={() => handleDeleteCandidate(c.id)}
+                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                            title="Xóa"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
 
-          {/* Footer Buttons */}
+          {/* Footer */}
           <div className="flex justify-end pt-4 border-t">
             <Button
               type="button"

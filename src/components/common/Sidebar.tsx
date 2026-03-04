@@ -12,6 +12,8 @@ import {
   Settings,
   Vote,
   X,
+  ChevronDown,
+  ShieldCheck,
 } from "lucide-react";
 
 interface NavItem {
@@ -20,7 +22,15 @@ interface NavItem {
   href: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
+interface NavGroup {
+  icon: React.ReactNode;
+  label: string;
+  basePath: string; // để check active group
+  children: NavItem[];
+}
+
+// Menu đơn
+const SINGLE_ITEMS: NavItem[] = [
   {
     icon: <LayoutGrid className="w-5 h-5" />,
     label: "Tổng quan",
@@ -36,17 +46,26 @@ const NAV_ITEMS: NavItem[] = [
     label: "Kết quả",
     href: "/dashboard/viewer",
   },
-  {
-    icon: <Users className="w-5 h-5" />,
-    label: "Quản lý TK",
-    href: "/dashboard/admin",
-  },
-  {
-    icon: <Settings className="w-5 h-5" />,
-    label: "Tổ kiểm phiếu",
-    href: "/dashboard/admin/teams",
-  },
 ];
+
+// Menu nhóm (collapsible)
+const ADMIN_GROUP: NavGroup = {
+  icon: <ShieldCheck className="w-5 h-5" />,
+  label: "Quản trị",
+  basePath: "/dashboard/admin",
+  children: [
+    {
+      icon: <Users className="w-5 h-5" />,
+      label: "Quản lý TK",
+      href: "/dashboard/admin",
+    },
+    {
+      icon: <Settings className="w-5 h-5" />,
+      label: "Tổ kiểm phiếu",
+      href: "/dashboard/admin/teams",
+    },
+  ],
+};
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -57,21 +76,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
   const pathname = usePathname();
   const [isMobile, setIsMobile] = useState(false);
 
+  // Auto-open group nếu đang ở trang admin
+  const isInAdminGroup = pathname?.startsWith(ADMIN_GROUP.basePath) || false;
+  const [isAdminOpen, setIsAdminOpen] = useState(isInAdminGroup);
+
+  // Sync mở group khi navigate
+  useEffect(() => {
+    if (isInAdminGroup) {
+      setIsAdminOpen(true);
+    }
+  }, [isInAdminGroup]);
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024);
     };
-
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  // Active check chính xác
   const isActive = (href: string) => {
     if (href === "/dashboard") {
       return pathname === "/dashboard";
     }
-    return pathname?.startsWith(href);
+    // Exact match cho /dashboard/admin (không match /dashboard/admin/teams)
+    if (href === "/dashboard/admin") {
+      return pathname === "/dashboard/admin";
+    }
+    return pathname?.startsWith(href) || false;
   };
 
   const sidebarContent = (
@@ -89,9 +123,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
         </div>
       </div>
 
-      {/* Navigation Items */}
+      {/* Navigation */}
       <nav className="flex-1 pt-4 px-3 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map((item) => (
+        {/* Single items */}
+        {SINGLE_ITEMS.map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -107,6 +142,61 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
             <span className="text-sm font-medium">{item.label}</span>
           </Link>
         ))}
+
+        {/* Divider */}
+        <div className="!my-3 border-t border-blue-900/30" />
+
+        {/* Admin Group - Collapsible */}
+        <div>
+          {/* Group Header — click để toggle */}
+          <button
+            onClick={() => setIsAdminOpen((prev) => !prev)}
+            className={clsx(
+              "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
+              isInAdminGroup
+                ? "bg-blue-600/20 text-white"
+                : "text-blue-100 hover:bg-blue-900/30 hover:text-white",
+            )}
+          >
+            <span className="flex-shrink-0">{ADMIN_GROUP.icon}</span>
+            <span className="text-sm font-medium flex-1 text-left">
+              {ADMIN_GROUP.label}
+            </span>
+            <ChevronDown
+              className={clsx(
+                "w-4 h-4 transition-transform duration-200",
+                isAdminOpen && "rotate-180",
+              )}
+            />
+          </button>
+
+          {/* Sub items — animation slide */}
+          <div
+            className={clsx(
+              "overflow-hidden transition-all duration-200 ease-in-out",
+              isAdminOpen ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0",
+            )}
+          >
+            <div className="ml-3 pl-3 border-l border-blue-800/50 space-y-1">
+              {ADMIN_GROUP.children.map((child) => (
+                <Link
+                  key={child.href}
+                  href={child.href}
+                  onClick={() => onClose?.()}
+                  className={clsx(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm",
+                    isActive(child.href)
+                      ? "bg-blue-600/40 text-white font-medium border-l-2 border-amber-500"
+                      : "text-blue-200 hover:bg-blue-900/30 hover:text-white",
+                  )}
+                >
+                  <span className="flex-shrink-0">{child.icon}</span>
+                  <span>{child.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
       </nav>
 
       {/* Footer */}
@@ -120,15 +210,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
   if (isMobile && isOpen) {
     return (
       <>
-        {/* Overlay */}
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={onClose}
         />
-
-        {/* Drawer */}
         <aside className="fixed left-0 top-0 h-screen w-64 bg-gradient-to-b from-[#0f3a5c] to-[#0a2a42] shadow-lg z-50 flex flex-col lg:hidden overflow-y-auto">
-          {/* Close Button */}
           <div className="p-4 flex justify-end">
             <button
               onClick={onClose}
@@ -137,8 +223,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
               <X className="w-6 h-6" />
             </button>
           </div>
-
-          {/* Content */}
           <div className="flex-1 flex flex-col">{sidebarContent}</div>
         </aside>
       </>

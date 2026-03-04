@@ -5,7 +5,7 @@ import { Card, Modal, Input, Select, Button } from "@/src/components/common";
 import { useUsersMock } from "@/src/hooks/useUsersMock";
 import { mockElectionTeams } from "@/src/data/mockElectionTeams";
 import type { MockUser } from "@/src/data/mockUsers";
-import { Pencil, Trash2, Settings, Search } from "lucide-react";
+import { Settings, Pencil, Trash2, Plus, Search } from "lucide-react";
 
 const ROLE_OPTIONS = [
   { value: "ADMIN", label: "Quản trị viên", color: "bg-[#1a3a5c] text-white" },
@@ -17,12 +17,7 @@ const ROLE_OPTIONS = [
   { value: "VIEWER", label: "Xem kết quả", color: "bg-emerald-500 text-white" },
 ];
 
-const TEAM_OPTIONS = [
-  { value: "", label: "— Không chọn —" },
-  ...mockElectionTeams.map((t) => ({ value: t.id, label: t.name })),
-];
-
-export const UserManagement: React.FC = () => {
+export const UserManagementPage: React.FC = () => {
   const { users, isLoading, createUser, updateUser, deleteUser } =
     useUsersMock();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,7 +29,6 @@ export const UserManagement: React.FC = () => {
     address: "",
     password: "",
     role: "AUDITOR",
-    teamId: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,7 +56,6 @@ export const UserManagement: React.FC = () => {
         address: user.address || "",
         password: "",
         role: user.role,
-        teamId: user.teamId || "",
       });
     } else {
       setEditingUser(null);
@@ -72,7 +65,6 @@ export const UserManagement: React.FC = () => {
         address: "",
         password: "",
         role: "AUDITOR",
-        teamId: "",
       });
     }
     setErrors({});
@@ -90,15 +82,11 @@ export const UserManagement: React.FC = () => {
           name: formData.name,
           address: formData.address,
           role: formData.role,
-          teamId: formData.teamId || undefined,
         };
         if (formData.password) updateData.password = formData.password;
         await updateUser(editingUser.id, updateData);
       } else {
-        await createUser({
-          ...formData,
-          teamId: formData.teamId || undefined,
-        } as any);
+        await createUser(formData);
       }
       setIsModalOpen(false);
     } finally {
@@ -107,25 +95,9 @@ export const UserManagement: React.FC = () => {
   };
 
   // Tìm tổ kiểm phiếu của user
-  const getUserTeam = (user: MockUser): string => {
-    if (user.teamId) {
-      const team = mockElectionTeams.find((t) => t.id === user.teamId);
-      if (team) return team.name;
-    }
-    // Fallback: tra ngược qua auditorIds
-    const team = mockElectionTeams.find((t) => t.auditorIds.includes(user.id));
-    return team ? team.name : "—";
-  };
-
-  const getRoleBadge = (role: string) => {
-    const opt = ROLE_OPTIONS.find((r) => r.value === role);
-    return (
-      <span
-        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide ${opt?.color || "bg-gray-200 text-gray-700"}`}
-      >
-        {opt?.label || role}
-      </span>
-    );
+  const getUserTeam = (userId: string): string => {
+    const team = mockElectionTeams.find((t) => t.auditorIds.includes(userId));
+    return team ? team.name.replace(/[🏛️🏢🏘️]/g, "").trim() : "—";
   };
 
   // Lọc users theo từ khóa
@@ -135,95 +107,104 @@ export const UserManagement: React.FC = () => {
       u.email.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
+  const getRoleBadge = (role: string) => {
+    const opt = ROLE_OPTIONS.find((r) => r.value === role);
+    return (
+      <span
+        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${opt?.color || "bg-gray-200 text-gray-700"}`}
+      >
+        {opt?.label || role}
+      </span>
+    );
+  };
+
   return (
-    <Card className="p-0 overflow-hidden animate-fadeInUp animation-delay-200">
+    <Card className="p-0 overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-5 border-b border-gray-100">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              Quản lý tài khoản
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Tạo và phân quyền tài khoản kiểm phiếu
-            </p>
+      <div className="px-6 py-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="animate-fadeInLeft">
+          <h2 className="text-2xl font-bold text-gray-900">
+            Quản lý tài khoản
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Tạo và phân quyền tài khoản kiểm phiếu
+          </p>
+        </div>
+        <div className="flex items-center gap-3 animate-fadeInRight">
+          {/* Ô tìm kiếm */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all w-48"
+            />
           </div>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all w-44"
-              />
-            </div>
-            <button
-              onClick={() => handleOpenModal()}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md active:scale-95"
-            >
-              <Settings className="w-4 h-4" />
-              Tạo tài khoản
-            </button>
-          </div>
+          <button
+            onClick={() => handleOpenModal()}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md active:scale-95"
+          >
+            <Settings className="w-4 h-4" />
+            Tạo tài khoản
+          </button>
         </div>
       </div>
 
       {/* Table */}
       {isLoading ? (
-        <div className="text-center py-16 text-gray-400 animate-pulse">
-          Đang tải dữ liệu...
+        <div className="text-center py-16 text-gray-500 animate-pulse">
+          ⏳ Đang tải dữ liệu...
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-50/80 border-b border-gray-200">
-                {[
-                  "Họ tên",
-                  "Email",
-                  "Vai trò",
-                  "Tổ kiểm phiếu",
-                  "Thao tác",
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-                  >
-                    {h}
-                  </th>
-                ))}
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Họ tên
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Vai trò
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Tổ kiểm phiếu
+                </th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Thao tác
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredUsers.map((user, idx) => (
                 <tr
                   key={user.id}
-                  className="hover:bg-blue-50/40 transition-colors duration-150 animate-fadeInUp"
-                  style={{ animationDelay: `${idx * 40}ms` }}
+                  className="hover:bg-blue-50/50 transition-colors duration-150 animate-fadeInUp"
+                  style={{ animationDelay: `${idx * 50}ms` }}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white text-sm font-bold shadow-sm flex-shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white text-sm font-bold shadow-sm">
                         {user.name?.charAt(0).toUpperCase() || "?"}
                       </div>
-                      <span className="font-medium text-gray-900 text-sm">
+                      <span className="font-medium text-gray-900">
                         {user.name}
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                  <td className="px-6 py-4 text-sm text-gray-600">
                     {user.email}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {getRoleBadge(user.role)}
+                  <td className="px-6 py-4">{getRoleBadge(user.role)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {getUserTeam(user.id)}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
-                    {getUserTeam(user)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center justify-end gap-1">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => handleOpenModal(user)}
                         className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all duration-200 active:scale-90"
@@ -249,7 +230,7 @@ export const UserManagement: React.FC = () => {
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-6 py-12 text-center text-gray-400 text-sm"
+                    className="px-6 py-12 text-center text-gray-400"
                   >
                     Không tìm thấy tài khoản nào
                   </td>
@@ -317,16 +298,6 @@ export const UserManagement: React.FC = () => {
             }))}
             disabled={isSubmitting}
           />
-          <Select
-            label="Tổ kiểm phiếu (không bắt buộc)"
-            value={formData.teamId}
-            onChange={(e) =>
-              setFormData({ ...formData, teamId: e.target.value })
-            }
-            options={TEAM_OPTIONS}
-            disabled={isSubmitting}
-          />
-
           <div className="flex gap-3 justify-end pt-4 border-t mt-5">
             <Button
               type="button"

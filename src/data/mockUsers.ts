@@ -4,6 +4,7 @@ export interface MockUser {
   name: string;
   address?: string;
   role: "ADMIN" | "AUDITOR" | "VIEWER";
+  teamId?: string; // Tổ kiểm phiếu (optional)
   createdAt: Date;
 }
 
@@ -20,6 +21,7 @@ export const mockUsers: MockUser[] = [
     email: "auditor1@test.com",
     name: "Trần Văn Kiểm phiếu 1",
     role: "AUDITOR",
+    teamId: "t1",
     createdAt: new Date("2026-01-05"),
   },
   {
@@ -27,6 +29,7 @@ export const mockUsers: MockUser[] = [
     email: "auditor2@test.com",
     name: "Phạm Văn Kiểm phiếu 2",
     role: "AUDITOR",
+    teamId: "t2",
     createdAt: new Date("2026-01-10"),
   },
   {
@@ -41,6 +44,7 @@ export const mockUsers: MockUser[] = [
     email: "auditor3@test.com",
     name: "Võ Văn Kiểm phiếu 3",
     role: "AUDITOR",
+    teamId: "t3",
     createdAt: new Date("2026-01-20"),
   },
 ];

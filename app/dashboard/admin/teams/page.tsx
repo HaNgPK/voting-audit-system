@@ -3,10 +3,10 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/src/hooks/useSession";
-import { UserManagement } from "@/src/components/admin/UserManagement";
+import { TeamManagement } from "@/src/components/admin/TeamManagement";
 import { BallotManagement } from "@/src/components/admin/BallotManagement";
 
-export default function AdminDashboard() {
+export default function AdminTeamsPage() {
   const router = useRouter();
   const { user, isLoading } = useSession();
 
@@ -30,16 +30,15 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div className="animate-fadeInDown">
-        <h1 className="text-3xl font-bold text-gray-900">
-          👨‍💼 Bảng điều khiển Admin
-        </h1>
-        <p className="text-gray-600 mt-2">Quản lý hệ thống kiểm phiếu</p>
+        <h1 className="text-3xl font-bold text-gray-900">🏛️ Tổ kiểm phiếu</h1>
+        <p className="text-gray-600 mt-2">
+          Quản lý tổ kiểm phiếu, kiểm phiếu viên và danh sách cử tri
+        </p>
       </div>
-
-    
-
-      {/* Quản lý Tài khoản */}
-      <UserManagement />
+      {/* Quản lý Danh sách bầu cử */}
+      <BallotManagement />
+      {/* Quản lý Tổ kiểm phiếu */}
+      <TeamManagement />
     </div>
   );
 }

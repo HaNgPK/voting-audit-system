@@ -1,12 +1,11 @@
 export type ElectionLevel = "QUOCHOI" | "THANHPHO" | "XA";
 
-// ✅ FIX: Thêm index vào Candidate
 export interface Candidate {
   id: string;
   name: string;
   birthYear?: number;
   gender?: "Nam" | "Nữ";
-  index: number; // ✅ THÊM CÁI NÀY
+  index: number;
 }
 
 export interface Ballot {
@@ -16,11 +15,20 @@ export interface Ballot {
   candidates?: Candidate[];
 }
 
+export interface Voter {
+  id: string;
+  name: string;
+  address?: string;
+  idNumber?: string; // CMND/CCCD
+}
+
 export interface ElectionTeam {
   id: string;
   name: string;
   auditorIds: string[];
+  ballotIds: string[]; // danh sách id ballot được phân
   ballots: Ballot[];
+  voters: Voter[];
   createdAt: Date;
 }
 
@@ -59,13 +67,7 @@ export const mockAvailableBallots: Ballot[] = [
         gender: "Nam",
         index: 4,
       },
-      {
-        id: "c5",
-        name: "Vũ Thị Hoa",
-        birthYear: 1979,
-        gender: "Nữ",
-        index: 5,
-      },
+      { id: "c5", name: "Vũ Thị Hoa", birthYear: 1979, gender: "Nữ", index: 5 },
     ],
   },
   {
@@ -154,39 +156,57 @@ export const mockAvailableBallots: Ballot[] = [
   },
 ];
 
-// ✅ Election Teams (giữ nguyên)
+// ✅ Election Teams
 export const mockElectionTeams: ElectionTeam[] = [
   {
     id: "t1",
-    name: "🏛️ Tổ kiểm phiếu số 1 - Quốc hội",
+    name: "Tổ kiểm phiếu số 1",
     auditorIds: ["1", "2", "3"],
+    ballotIds: ["ballot-1", "ballot-2", "ballot-3"],
     ballots: [
       mockAvailableBallots[0],
       mockAvailableBallots[1],
       mockAvailableBallots[2],
+    ],
+    voters: [
+      {
+        id: "v1",
+        name: "Nguyễn Văn Hùng",
+        address: "Phường 1, Quận 1",
+        idNumber: "012345678901",
+      },
+      {
+        id: "v2",
+        name: "Trần Thị Hồng",
+        address: "Phường 2, Quận 1",
+        idNumber: "012345678902",
+      },
     ],
     createdAt: new Date("2026-02-01"),
   },
   {
     id: "t2",
-    name: "🏢 Tổ kiểm phiếu số 2 - Thành phố",
+    name: "Tổ kiểm phiếu số 2",
     auditorIds: ["1", "2"],
-    ballots: [
-      mockAvailableBallots[0],
-      mockAvailableBallots[1],
-      mockAvailableBallots[2],
+    ballotIds: ["ballot-1", "ballot-2"],
+    ballots: [mockAvailableBallots[0], mockAvailableBallots[1]],
+    voters: [
+      {
+        id: "v3",
+        name: "Lê Minh Tuấn",
+        address: "Phường 3, Quận 2",
+        idNumber: "012345678903",
+      },
     ],
     createdAt: new Date("2026-02-05"),
   },
   {
     id: "t3",
-    name: "🏘️ Tổ kiểm phiếu số 3 - Xã",
+    name: "Tổ kiểm phiếu số 3",
     auditorIds: ["1", "3", "5"],
-    ballots: [
-      mockAvailableBallots[0],
-      mockAvailableBallots[1],
-      mockAvailableBallots[2],
-    ],
+    ballotIds: ["ballot-1", "ballot-3"],
+    ballots: [mockAvailableBallots[0], mockAvailableBallots[2]],
+    voters: [],
     createdAt: new Date("2026-02-10"),
   },
 ];

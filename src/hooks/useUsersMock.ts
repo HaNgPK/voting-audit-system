@@ -9,7 +9,6 @@ export const useUsersMock = () => {
   // Lấy danh sách users
   const fetchUsers = useCallback(() => {
     setIsLoading(true);
-    // Simulate API call delay
     setTimeout(() => {
       setUsers([...mockUsers]);
       setIsLoading(false);
@@ -23,6 +22,7 @@ export const useUsersMock = () => {
       name: string;
       password: string;
       role: string;
+      teamId?: string;
     }) => {
       return new Promise<MockUser>((resolve) => {
         setTimeout(() => {
@@ -31,6 +31,7 @@ export const useUsersMock = () => {
             email: userData.email,
             name: userData.name,
             role: userData.role as "ADMIN" | "AUDITOR" | "VIEWER",
+            teamId: userData.teamId || undefined,
             createdAt: new Date(),
           };
           setUsers((prev) => [newUser, ...prev]);
@@ -51,6 +52,7 @@ export const useUsersMock = () => {
         name: string;
         password: string;
         role: string;
+        teamId: string;
       }>,
     ) => {
       return new Promise<MockUser>((resolve) => {
@@ -63,6 +65,10 @@ export const useUsersMock = () => {
                     email: userData.email || user.email,
                     name: userData.name || user.name,
                     role: (userData.role as any) || user.role,
+                    teamId:
+                      userData.teamId !== undefined
+                        ? userData.teamId || undefined
+                        : user.teamId,
                   }
                 : user,
             ),
