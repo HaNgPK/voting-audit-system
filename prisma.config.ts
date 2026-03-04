@@ -10,4 +10,7 @@ export default defineConfig({
     // Dùng process.env thay vì env() để tránh Prisma kiểm tra quá gắt
     url: process.env.DATABASE_URL_UNPOOLED as string,
   },
+  migrations: {
+    seed: "tsx prisma/seed.ts",
+  },
 });

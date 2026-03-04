@@ -75,6 +75,26 @@ export function useBallots() {
       fetchBallots();
     }
   };
+  const importCandidates = async (ballotId: string, candidates: any[]) => {
+    try {
+      const res = await fetch("/api/candidates/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ballotId, candidates }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message);
+        fetchBallots(); // Tải lại dữ liệu mới nhất
+        return true;
+      }
+      toast.error(data.message);
+      return false;
+    } catch (error) {
+      toast.error("Lỗi kết nối máy chủ");
+      return false;
+    }
+  };
 
   return {
     ballots,
@@ -83,5 +103,6 @@ export function useBallots() {
     deleteBallot,
     addCandidate,
     removeCandidate,
+    importCandidates,
   };
 }
