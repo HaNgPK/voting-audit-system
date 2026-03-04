@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
-import HeaderMenu from "@/src/components/common/HeaderMenu";
+import { DashboardLayout } from "@/src/components/layouts/DashboardLayout";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,9 +15,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
-      <body className="bg-gray-50">
-        <HeaderMenu />
-        <main className="min-h-screen">{children}</main>
+      <body>
+        <DashboardLayout>{children}</DashboardLayout>
         <Toaster position="top-right" />
       </body>
     </html>

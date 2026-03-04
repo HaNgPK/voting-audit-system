@@ -4,3 +4,6 @@ export { Select } from "./Select";
 export { Card } from "./Card";
 export { Modal } from "./Modal";
 export { Table } from "./Table";
+export { Sidebar } from "./Sidebar";
+export { Header } from "./Header";
+export { OverviewCard } from "./OverviewCard";

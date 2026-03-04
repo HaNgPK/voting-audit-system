@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import type { MockUser } from "@/src/data/mockUsers";
 
 export const useSession = () => {
@@ -6,18 +6,16 @@ export const useSession = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Lấy user từ localStorage (giả lập session)
-    try {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error("Failed to parse user data:", error);
       }
-    } catch (error) {
-      console.error("Error loading session:", error);
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   }, []);
 
   return { user, isLoading };

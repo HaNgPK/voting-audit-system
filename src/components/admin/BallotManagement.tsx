@@ -38,6 +38,7 @@ export const BallotManagement: React.FC = () => {
     name: "",
     birthYear: "",
     gender: "Nam" as "Nam" | "Nữ",
+    index: 1,
   });
 
   const handleOpenModal = (ballot?: Ballot) => {
@@ -55,6 +56,7 @@ export const BallotManagement: React.FC = () => {
     e.preventDefault();
     if (!formData.name.trim())
       return toast.error("Tên danh sách không được để trống!");
+
     if (editingBallot) {
       setBallots((prev) =>
         prev.map((b) =>
@@ -63,15 +65,13 @@ export const BallotManagement: React.FC = () => {
       );
       toast.success("Cập nhật danh sách thành công!");
     } else {
-      setBallots([
-        {
-          id: `ballot-${Date.now()}`,
-          name: formData.name,
-          level: formData.level,
-          candidates: [],
-        },
-        ...ballots,
-      ]);
+      const newBallot: Ballot = {
+        id: `ballot-${Date.now()}`,
+        name: formData.name,
+        level: formData.level,
+        candidates: [],
+      };
+      setBallots([newBallot, ...ballots]);
       toast.success("Tạo danh sách mới thành công!");
     }
     setIsModalOpen(false);
@@ -79,7 +79,13 @@ export const BallotManagement: React.FC = () => {
 
   const handleOpenCandidateModal = (ballot: Ballot) => {
     setManagingBallot(ballot);
-    setCandidateForm({ name: "", birthYear: "", gender: "Nam" });
+    const nextIndex = ((ballot.candidates || []).length || 0) + 1;
+    setCandidateForm({
+      name: "",
+      birthYear: "",
+      gender: "Nam",
+      index: nextIndex,
+    });
     setCandidateModalOpen(true);
   };
 
@@ -87,11 +93,13 @@ export const BallotManagement: React.FC = () => {
     e.preventDefault();
     if (!candidateForm.name || !candidateForm.birthYear)
       return toast.error("Vui lòng nhập đủ thông tin!");
+
     const newCandidate: Candidate = {
       id: `cand-${Date.now()}`,
       name: candidateForm.name,
       birthYear: parseInt(candidateForm.birthYear),
       gender: candidateForm.gender,
+      index: candidateForm.index,
     };
 
     setBallots((prev) =>
@@ -104,7 +112,14 @@ export const BallotManagement: React.FC = () => {
         return b;
       }),
     );
-    setCandidateForm({ name: "", birthYear: "", gender: "Nam" });
+    toast.success("Thêm ứng viên thành công!");
+    const nextIndex = ((managingBallot?.candidates || []).length || 0) + 1;
+    setCandidateForm({
+      name: "",
+      birthYear: "",
+      gender: "Nam",
+      index: nextIndex,
+    });
   };
 
   const handleDeleteCandidate = (candidateId: string) => {
@@ -121,6 +136,13 @@ export const BallotManagement: React.FC = () => {
         return b;
       }),
     );
+    toast.success("Xóa ứng viên thành công!");
+  };
+
+  const handleDeleteBallot = (ballotId: string) => {
+    if (!confirm("Xóa danh sách này?")) return;
+    setBallots((prev) => prev.filter((b) => b.id !== ballotId));
+    toast.success("Xóa danh sách thành công!");
   };
 
   return (
@@ -134,52 +156,50 @@ export const BallotManagement: React.FC = () => {
         </Button>
       </div>
 
-      <Table
-        headers={["Tên danh sách", "Cấp độ", "Số ứng cử viên", "Thao tác"]}
-        rows={ballots.map((b) => [
-          <span key={b.id} className="font-medium text-gray-800">
-            {b.name}
-          </span>,
-          LEVEL_OPTIONS.find((l) => l.value === b.level)?.label || b.level,
-          <span
-            key={`count-${b.id}`}
-            className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm font-semibold"
-          >
-            {b.candidates?.length || 0} người
-          </span>,
-        ])}
-        actions={(rowIdx) => (
-          <div className="flex gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => handleOpenCandidateModal(ballots[rowIdx])}
+      <div className="overflow-x-auto">
+        <Table
+          headers={["Tên danh sách", "Cấp độ", "Số ứng cử viên", "Thao tác"]}
+          rows={ballots.map((b) => [
+            <span key={b.id} className="font-medium text-gray-800">
+              {b.name}
+            </span>,
+            LEVEL_OPTIONS.find((l) => l.value === b.level)?.label || b.level,
+            <span
+              key={`count-${b.id}`}
+              className="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm font-semibold"
             >
-              👥 Ứng viên
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handleOpenModal(ballots[rowIdx])}
-            >
-              ✏️ Sửa
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() =>
-                confirm("Xóa danh sách này?") &&
-                setBallots((prev) =>
-                  prev.filter((b) => b.id !== ballots[rowIdx].id),
-                )
-              }
-            >
-              🗑️ Xóa
-            </Button>
-          </div>
-        )}
-      />
+              {b.candidates?.length || 0} người
+            </span>,
+          ])}
+          actions={(rowIdx) => (
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleOpenCandidateModal(ballots[rowIdx])}
+              >
+                👥 Ứng viên
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleOpenModal(ballots[rowIdx])}
+              >
+                ✏️ Sửa
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => handleDeleteBallot(ballots[rowIdx].id)}
+              >
+                🗑️ Xóa
+              </Button>
+            </div>
+          )}
+        />
+      </div>
 
+      {/* Modal Tạo/Sửa Danh sách */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -190,6 +210,7 @@ export const BallotManagement: React.FC = () => {
             label="Tên danh sách"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="Ví dụ: Danh sách bầu cử Quốc hội 2026"
           />
           <Select
             label="Cấp độ"
@@ -217,6 +238,7 @@ export const BallotManagement: React.FC = () => {
         </form>
       </Modal>
 
+      {/* Modal Quản lý Ứng viên */}
       <Modal
         isOpen={candidateModalOpen}
         onClose={() => setCandidateModalOpen(false)}
@@ -224,9 +246,10 @@ export const BallotManagement: React.FC = () => {
         size="lg"
       >
         <div className="space-y-6">
+          {/* Form Thêm Ứng viên */}
           <form
             onSubmit={handleAddCandidate}
-            className="bg-gray-50 p-4 rounded-lg border border-gray-200 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end"
+            className="bg-gray-50 p-4 rounded-lg border border-gray-200 grid grid-cols-1 sm:grid-cols-5 gap-3 items-end"
           >
             <div className="sm:col-span-2">
               <Input
@@ -235,6 +258,7 @@ export const BallotManagement: React.FC = () => {
                 onChange={(e) =>
                   setCandidateForm({ ...candidateForm, name: e.target.value })
                 }
+                placeholder="Nhập tên ứng cử viên"
               />
             </div>
             <div>
@@ -248,61 +272,72 @@ export const BallotManagement: React.FC = () => {
                     birthYear: e.target.value,
                   })
                 }
+                placeholder="1980"
               />
             </div>
             <div>
-              <Select
-                label="Giới tính"
-                value={candidateForm.gender}
+              <Input
+                label="Số thứ tự"
+                type="number"
+                value={candidateForm.index}
                 onChange={(e) =>
                   setCandidateForm({
                     ...candidateForm,
-                    gender: e.target.value as any,
+                    index: parseInt(e.target.value) || 1,
                   })
                 }
-                options={[
-                  { value: "Nam", label: "Nam" },
-                  { value: "Nữ", label: "Nữ" },
-                ]}
+                min="1"
               />
             </div>
-            <div className="sm:col-span-4 mt-2 flex justify-end">
+            <div className="sm:col-span-5 flex justify-end gap-2">
               <Button type="submit" variant="primary">
-                ➕ Thêm vào danh sách
+                ➕ Thêm
               </Button>
             </div>
           </form>
 
-          <div className="border rounded-lg overflow-hidden max-h-[300px] overflow-y-auto">
-            <Table
-              headers={["Họ và tên", "Năm sinh", "Giới tính", "Hành động"]}
-              rows={(managingBallot?.candidates || []).map((c) => [
-                <span key={c.id} className="font-semibold text-gray-800">
-                  {c.name}
-                </span>,
-                c.birthYear,
-                c.gender,
-              ])}
-              actions={(rowIdx) => (
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() =>
-                    handleDeleteCandidate(
-                      (managingBallot?.candidates || [])[rowIdx].id,
-                    )
-                  }
-                >
-                  🗑️ Xóa
-                </Button>
-              )}
-            />
+          {/* Danh sách Ứng viên */}
+          <div className="border rounded-lg overflow-hidden">
+            {(managingBallot?.candidates || []).length === 0 ? (
+              <div className="p-4 text-center text-gray-500">
+                Chưa có ứng cử viên nào. Hãy thêm ứng cử viên ở trên.
+              </div>
+            ) : (
+              <div className="max-h-[350px] overflow-y-auto">
+                <Table
+                  headers={["STT", "Họ và tên", "Năm sinh", "Hành động"]}
+                  rows={(managingBallot?.candidates || []).map((c) => [
+                    <span key={`idx-${c.id}`} className="font-semibold">
+                      {c.index}
+                    </span>,
+                    <span key={c.id} className="font-semibold text-gray-800">
+                      {c.name}
+                    </span>,
+                    <span key={`birth-${c.id}`}>{c.birthYear}</span>,
+                  ])}
+                  actions={(rowIdx) => (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() =>
+                        handleDeleteCandidate(
+                          (managingBallot?.candidates || [])[rowIdx].id,
+                        )
+                      }
+                    >
+                      🗑️ Xóa
+                    </Button>
+                  )}
+                />
+              </div>
+            )}
           </div>
 
-          <div className="flex justify-end pt-4 border-t mt-5">
+          {/* Footer Buttons */}
+          <div className="flex justify-end pt-4 border-t">
             <Button
               type="button"
-              variant="secondary"
+              variant="primary"
               onClick={() => setCandidateModalOpen(false)}
             >
               ✅ Hoàn thành & Đóng
