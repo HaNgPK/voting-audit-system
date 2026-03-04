@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Card } from "@/src/components/common";
-import { mockUsers } from "@/src/data/mockUsers";
 import toast from "react-hot-toast";
 import { Vote, Shield, Users, BarChart3 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@test.com");
-  const [password, setPassword] = useState("123456");
+  // Đã làm trống email/password thay vì để sẵn text
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -18,17 +18,28 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Giả lập API gọi lên server
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const user = mockUsers.find((u) => u.email === email);
+      // Gọi API thật thay vì dùng giả lập
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      if (user) {
-        localStorage.setItem("user", JSON.stringify(user));
+      const data = await res.json();
+
+      if (data.success) {
+        // Lưu thông tin user thật từ Database vào localStorage
+        localStorage.setItem("user", JSON.stringify(data.data));
         toast.success("Đăng nhập thành công!");
         router.push("/dashboard");
       } else {
-        toast.error("Tài khoản không tồn tại trong hệ thống!");
+        // Bắt lỗi từ server (sai email, sai mật khẩu...)
+        toast.error(data.message || "Đăng nhập thất bại!");
       }
+    } catch (error) {
+      toast.error("Lỗi kết nối đến server!");
     } finally {
       setIsLoading(false);
     }

@@ -2,106 +2,121 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"] // Bắt buộc để dùng adapter của Neon DB
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // KHÔNG thêm url ở đây, Prisma 7 sẽ đọc từ prisma.config.ts
 }
 
+// 1. NGƯỜI DÙNG
 model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
+  id        String   @id @default(cuid())
+  email     String   @unique
   name      String?
   password  String
-  role      UserRole   @default(AUDITOR)
-  groups    Group[]    @relation("UserGroups")
+  role      String   @default("AUDITOR") // ADMIN, AUDITOR, VIEWER
+  address   String?  // Địa chỉ người dùng
+
+  // Liên kết N-N: Một kiểm phiếu viên có thể nằm trong nhiều Tổ
+  teams     Team[]   @relation("TeamAuditors")
   audits    Audit[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
 }
 
-model Group {
-  id          String     @id @default(cuid())
-  name        String
-  commune     String
-  code        String     @unique
-  users       User[]     @relation("UserGroups")
-  ballots     Ballot[]
-  audits      Audit[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+// 2. TỔ KIỂM PHIẾU (Thay cho Group)
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  
+  // Liên kết N-N
+  auditors  User[]   @relation("TeamAuditors")
+  ballots   Ballot[] @relation("TeamBallots") // Các danh sách bầu cử tổ này phải kiểm
+  
+  // Liên kết 1-N
+  voters    Voter[]  // Danh sách cử tri của tổ
+  audits    Audit[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@map("groups")
+  @@map("teams")
 }
 
-model BallotType {
-  id          String     @id @default(cuid())
-  name        String     @unique
-  description String?
-  ballots     Ballot[]
-  candidates Candidate[]
-  createdAt   DateTime   @default(now())
-
-  @@map("ballot_types")
-}
-
-model Candidate {
-  id            String      @id @default(cuid())
-  name          String
-  ballotTypeId  String
-  ballotType    BallotType  @relation(fields: [ballotTypeId], references: [id], onDelete: Cascade)
-  order         Int
-  voteCount     Int         @default(0)
-  createdAt     DateTime    @default(now())
-
-  @@unique([ballotTypeId, order])
-  @@map("candidates")
-}
-
+// 3. DANH SÁCH BẦU CỬ (Thay cho BallotType)
 model Ballot {
-  id           String       @id @default(cuid())
-  groupId      String
-  group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  ballotTypeId String
-  ballotType   BallotType   @relation(fields: [ballotTypeId], references: [id], onDelete: Cascade)
-  ballotNumber Int
-  status       BallotStatus @default(PENDING)
-  audits       Audit[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id          String      @id @default(cuid())
+  name        String      // VD: Đơn vị bầu cử Xã số 01
+  level       String      // Cấp độ: QUOCHOI, THANHPHO, XA
+  description String?
+  
+  candidates  Candidate[]
+  teams       Team[]      @relation("TeamBallots")
+  audits      Audit[]
 
-  @@unique([groupId, ballotTypeId, ballotNumber])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
   @@map("ballots")
 }
 
-model Audit {
-  id          String    @id @default(cuid())
+// 4. ỨNG CỬ VIÊN
+model Candidate {
+  id          String   @id @default(cuid())
+  name        String
+  birthYear   Int      // Năm sinh
+  gender      String   // Nam / Nữ
+  index       Int      // Số thứ tự trong danh sách
+  voteCount   Int      @default(0)
+  
   ballotId    String
-  ballot      Ballot    @relation(fields: [ballotId], references: [id], onDelete: Cascade)
-  groupId     String
-  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  ballot      Ballot   @relation(fields: [ballotId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+
+  @@unique([ballotId, index]) // Chống trùng số thứ tự trong cùng 1 danh sách
+  @@map("candidates")
+}
+
+// 5. CỬ TRI (Bảng mới)
+model Voter {
+  id       String  @id @default(cuid())
+  name     String
+  address  String?
+  idNumber String? // CMND/CCCD
+  
+  teamId   String
+  team     Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("voters")
+}
+
+// 6. LỊCH SỬ KIỂM PHIẾU (Giữ nguyên logic Audit cũ của bạn)
+model Audit {
+  id          String   @id @default(cuid())
+  
+  ballotId    String
+  ballot      Ballot   @relation(fields: [ballotId], references: [id], onDelete: Cascade)
+  
+  teamId      String
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
   userId      String
-  user        User      @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+  
   candidateId String?
   notes       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("audits")
-}
-
-enum UserRole {
-  ADMIN
-  AUDITOR
-  VIEWER
-}
-
-enum BallotStatus {
-  PENDING
-  AUDITED
-  COMPLETE
 }

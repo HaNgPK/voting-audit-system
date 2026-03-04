@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Card, Modal, Input, Select, Button } from "@/src/components/common";
-import { useUsersMock } from "@/src/hooks/useUsersMock";
+import { useUsers } from "@/src/hooks/useUsers";
 import { mockElectionTeams } from "@/src/data/mockElectionTeams";
 import type { MockUser } from "@/src/data/mockUsers";
 import { Settings, Pencil, Trash2, Plus, Search } from "lucide-react";
@@ -18,8 +18,7 @@ const ROLE_OPTIONS = [
 ];
 
 export const UserManagementPage: React.FC = () => {
-  const { users, isLoading, createUser, updateUser, deleteUser } =
-    useUsersMock();
+  const { users, isLoading, createUser, updateUser, deleteUser } = useUsers();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<MockUser | null>(null);
   const [searchQuery, setSearchQuery] = useState("");

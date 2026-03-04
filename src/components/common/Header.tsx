@@ -13,15 +13,18 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [user, setUser] = useState<any>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Lấy thông tin user từ localStorage khi component mount
     const userData = localStorage.getItem("user");
     if (userData) {
       setUser(JSON.parse(userData));
     }
 
+    // Xử lý responsive
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024);
     };
@@ -31,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  // Logic Đăng xuất chuẩn xác: Xóa vé -> Thông báo -> Đá về Login
   const handleLogout = () => {
     localStorage.removeItem("user");
     toast.success("Đăng xuất thành công!");
@@ -91,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             {/* User Info - Hidden on very small screens */}
             <div className="hidden sm:block text-left">
               <p className="text-xs sm:text-sm font-medium text-white truncate max-w-[100px] sm:max-w-none">
-                {user?.name || "Admin"}
+                {user?.name || "Đang tải..."}
               </p>
               <p className={`text-xs font-semibold ${roleInfo.color}`}>
                 {roleInfo.label}
@@ -112,10 +116,10 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               {/* User Info */}
               <div className="px-4 py-4 bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-200">
                 <p className="font-semibold text-gray-900 text-sm">
-                  {user?.name}
+                  {user?.name || "Người dùng"}
                 </p>
                 <p className="text-xs text-gray-600 mt-1 truncate">
-                  {user?.email}
+                  {user?.email || "..."}
                 </p>
                 <p className={`text-xs font-bold mt-2 ${roleInfo.color}`}>
                   {roleInfo.label}
