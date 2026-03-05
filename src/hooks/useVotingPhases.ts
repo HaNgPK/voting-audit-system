@@ -1,55 +1,42 @@
-import { useState, useEffect, useCallback } from "react";
-import {
-  mockVotingPhases,
-  type VotingPhase,
-} from "@/src/data/mockVotingAssignments";
+import { useState, useCallback } from "react";
 import toast from "react-hot-toast";
+import type { VotingPhase } from "@/src/data/mockVotingAssignments";
+
+// Mở rộng thêm 2 trường cho Phase để đếm phiếu Hợp lệ / Hỏng
+export interface ActiveVotingPhase extends VotingPhase {
+  validBallots: number;
+  invalidBallots: number;
+}
 
 export const useVotingPhases = () => {
-  const [phases, setPhases] = useState<VotingPhase[]>([]);
+  const [phases, setPhases] = useState<ActiveVotingPhase[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setPhases([...mockVotingPhases]);
-      setIsLoading(false);
-    }, 300);
+  // 1. Bắt đầu phiên
+  const createPhase = useCallback((data: any): ActiveVotingPhase => {
+    const newPhase: ActiveVotingPhase = {
+      id: `phase-${Date.now()}`,
+      teamId: data.teamId,
+      auditorId: data.auditorId,
+      level: data.level,
+      ballotId: data.ballotId,
+      votes: {},
+      totalVotes: 0,
+      ballotCount: 0,
+      validBallots: 0,
+      invalidBallots: 0,
+      currentTicketVotes: {},
+      startTime: new Date(),
+      status: "ACTIVE",
+      mode: data.mode,
+      quota: data.quota,
+    };
+    setPhases((prev) => [newPhase, ...prev]);
+    toast.success("Bắt đầu phiên kiểm phiếu");
+    return newPhase;
   }, []);
 
-  // Tạo phiên kiểm phiếu mới
-  const createPhase = useCallback(
-    (data: {
-      teamId: string;
-      auditorId: string;
-      level: "QUOCHOI" | "THANHPHO" | "XA";
-      ballotId: string;
-      mode: "FIXED_QUOTA" | "UNLIMITED";
-      quota?: number;
-    }): VotingPhase => {
-      const newPhase: VotingPhase = {
-        id: `phase-${Date.now()}`,
-        teamId: data.teamId,
-        auditorId: data.auditorId,
-        level: data.level,
-        ballotId: data.ballotId,
-        votes: {},
-        totalVotes: 0,
-        ballotCount: 0, // số phiếu (tờ phiếu) đã hoàn tất
-        currentTicketVotes: {}, // các ứng viên đang được chọn trong phiếu hiện tại
-        startTime: new Date(),
-        status: "ACTIVE",
-        mode: data.mode,
-        quota: data.quota,
-      };
-      setPhases((prev) => [newPhase, ...prev]);
-      toast.success("Bắt đầu phiên kiểm phiếu");
-      return newPhase;
-    },
-    [],
-  );
-
-  // Toggle chọn/bỏ chọn ứng viên trong phiếu hiện tại
+  // 2. Tick chọn ứng viên trên 1 tờ phiếu
   const toggleCandidateInTicket = useCallback(
     (phaseId: string, candidateId: string) => {
       setPhases((prev) =>
@@ -70,56 +57,99 @@ export const useVotingPhases = () => {
     [],
   );
 
-  // Hoàn tất 1 phiếu (tờ phiếu) — cộng phiếu vào tổng, reset phiếu hiện tại
-  const completeTicket = useCallback((phaseId: string) => {
+  // 3. Bấm xác nhận 1 tờ phiếu (Hợp lệ HOẶC Không hợp lệ)
+  const completeTicket = useCallback((phaseId: string, isValid: boolean) => {
     setPhases((prev) =>
       prev.map((phase) => {
         if (phase.id === phaseId && phase.status === "ACTIVE") {
           const currentTicket = phase.currentTicketVotes || {};
           const newVotes = { ...phase.votes };
-          Object.keys(currentTicket).forEach((candidateId) => {
-            newVotes[candidateId] = (newVotes[candidateId] || 0) + 1;
-          });
+
+          // CHỈ CỘNG ĐIỂM NẾU PHIẾU HỢP LỆ
+          if (isValid) {
+            Object.keys(currentTicket).forEach((candidateId) => {
+              newVotes[candidateId] = (newVotes[candidateId] || 0) + 1;
+            });
+          }
+
           const totalVotes = Object.values(newVotes).reduce((a, b) => a + b, 0);
+
           return {
             ...phase,
             votes: newVotes,
             totalVotes,
-            ballotCount: (phase.ballotCount || 0) + 1,
-            currentTicketVotes: {}, // reset phiếu hiện tại
+            ballotCount: phase.ballotCount + 1,
+            validBallots: isValid ? phase.validBallots + 1 : phase.validBallots,
+            invalidBallots: !isValid
+              ? phase.invalidBallots + 1
+              : phase.invalidBallots,
+            currentTicketVotes: {}, // Reset tờ mới
           };
         }
         return phase;
       }),
     );
-    toast.success("Đã hoàn tất phiếu");
+    toast.success(
+      isValid ? "✅ Ghi nhận Phiếu Hợp Lệ" : "❌ Ghi nhận Phiếu Hỏng/Trắng",
+    );
   }, []);
 
-  // Hoàn thành phiên
+  // 4. Kết thúc và LƯU LÊN DATABASE
   const completePhase = useCallback(
-    (phaseId: string): boolean => {
+    async (phaseId: string): Promise<boolean> => {
       const phase = phases.find((p) => p.id === phaseId);
       if (!phase) return false;
 
-      // FIXED_QUOTA: phải kiểm đủ số phiếu (tờ)
       if (phase.mode === "FIXED_QUOTA" && phase.quota) {
-        if ((phase.ballotCount || 0) !== phase.quota) {
+        if (phase.ballotCount !== phase.quota) {
           toast.error(
-            `Phải kiểm đủ ${phase.quota} phiếu. Hiện tại: ${phase.ballotCount || 0}`,
+            `Phải đếm đủ ${phase.quota} phiếu! Hiện tại: ${phase.ballotCount}`,
           );
           return false;
         }
       }
 
-      setPhases((prev) =>
-        prev.map((p) =>
-          p.id === phaseId
-            ? { ...p, status: "COMPLETED", endTime: new Date() }
-            : p,
-        ),
-      );
-      toast.success("Hoàn thành phiên kiểm phiếu");
-      return true;
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/voting/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            teamId: phase.teamId,
+            auditorId: phase.auditorId,
+            ballotId: phase.ballotId,
+            mode: phase.mode,
+            quota: phase.quota,
+            totalBallots: phase.ballotCount,
+            validBallots: phase.validBallots,
+            invalidBallots: phase.invalidBallots,
+            candidateVotes: phase.votes,
+            startTime: phase.startTime.toISOString(),
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          setPhases((prev) =>
+            prev.map((p) =>
+              p.id === phaseId
+                ? { ...p, status: "COMPLETED", endTime: new Date() }
+                : p,
+            ),
+          );
+          toast.success("Đã lưu kết quả thành công lên máy chủ!");
+          return true;
+        } else {
+          toast.error(data.message || "Lỗi lưu dữ liệu!");
+          return false;
+        }
+      } catch (error) {
+        toast.error("Mất kết nối máy chủ");
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
     },
     [phases],
   );

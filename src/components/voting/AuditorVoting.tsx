@@ -1,34 +1,79 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/src/hooks/useSession";
-import { useElectionTeamsMock } from "@/src/hooks/useElectionTeamsMock";
 import { useVotingPhases } from "@/src/hooks/useVotingPhases";
-import { Card } from "@/src/components/common";
 import { VotingInterface } from "./VotingInterface";
 import { ActivePhaseVoting } from "./ActivePhaseVoting";
 
 export const AuditorVoting: React.FC = () => {
   const router = useRouter();
   const { user, isLoading: sessionLoading } = useSession();
-  const { teams } = useElectionTeamsMock();
   const {
     phases,
-    isLoading,
+    isLoading: phaseLoading,
     createPhase,
     toggleCandidateInTicket,
     completeTicket,
     completePhase,
   } = useVotingPhases();
 
-  const [activePhaseId, setActivePhaseId] = useState<string>("");
+  // State lưu dữ liệu THẬT từ database
+  const [myTeam, setMyTeam] = useState<any>(null);
+  const [historySessions, setHistorySessions] = useState<any[]>([]); // Lưu lịch sử đếm
+  const [isLoadingTeam, setIsLoadingTeam] = useState(true);
+
+  const [activePhaseId, setActivePhaseId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get user's team
-  const myTeam = useMemo(() => {
-    return teams.find((t) => t.auditorIds.includes(String(user?.id || "")));
-  }, [teams, user]);
+  // Gọi API lấy Tổ kiểm phiếu & Lịch sử
+  const loadAssignmentData = useCallback(() => {
+    if (!user?.id) return;
+    fetch(`/api/voting/my-assignment?auditorId=${user.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data) {
+          setMyTeam(data.data.team);
+          setHistorySessions(data.data.sessions || []); // Nạp lịch sử từ DB vào đây
+        } else {
+          setMyTeam(null);
+        }
+        setIsLoadingTeam(false);
+      })
+      .catch(() => setIsLoadingTeam(false));
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id && !sessionLoading) {
+      setIsLoadingTeam(false);
+    } else if (user?.id) {
+      loadAssignmentData();
+    }
+  }, [user?.id, sessionLoading, loadAssignmentData]);
+
+  // Map dữ liệu từ Database sang định dạng hiển thị biểu đồ
+  const completedMappedPhases: any[] = useMemo(() => {
+    if (!myTeam) return [];
+    return historySessions.map((session) => {
+      const ballot = myTeam.ballots.find((b: any) => b.id === session.ballotId);
+      return {
+        id: session.id,
+        auditorId: session.auditorId,
+        status: "COMPLETED",
+        level: ballot?.level || "XA",
+        ballotCount: session.totalBallots,
+      };
+    });
+  }, [historySessions, myTeam]);
+
+  // Tính tổng số tờ phiếu từ dữ liệu DB
+  const myTotalBallotCount = useMemo(() => {
+    return completedMappedPhases.reduce(
+      (sum, p) => sum + (p.ballotCount || 0),
+      0,
+    );
+  }, [completedMappedPhases]);
 
   const activePhase = useMemo(() => {
     return phases.find((p) => p.id === activePhaseId);
@@ -36,35 +81,32 @@ export const AuditorVoting: React.FC = () => {
 
   const activeBallot = useMemo(() => {
     if (!activePhase || !myTeam) return null;
-    return myTeam.ballots.find((b) => b.id === activePhase.ballotId);
+    return myTeam.ballots.find((b: any) => b.id === activePhase.ballotId);
   }, [activePhase, myTeam]);
 
-  // Các phiên đã hoàn tất của user này
-  const myCompletedPhases = useMemo(() => {
-    return phases.filter(
-      (p) => p.auditorId === String(user?.id || "") && p.status === "COMPLETED",
-    );
-  }, [phases, user]);
-
-  const myTotalBallotCount = useMemo(() => {
-    return myCompletedPhases.reduce((sum, p) => sum + (p.ballotCount || 0), 0);
-  }, [myCompletedPhases]);
-
-  if (sessionLoading || isLoading) {
+  // Loading States
+  if (sessionLoading || phaseLoading || isLoadingTeam) {
     return (
-      <Card className="p-6 text-center">
-        <p className="text-gray-500">⏳ Đang tải...</p>
-      </Card>
+      <div className="flex justify-center items-center h-64">
+        <p className="text-gray-500 font-medium animate-pulse">
+          ⏳ Đang tải dữ liệu từ máy chủ...
+        </p>
+      </div>
     );
   }
 
   if (!myTeam) {
     return (
-      <Card className="p-6 bg-amber-50 border-l-4 border-amber-500">
-        <p className="text-amber-700 font-semibold">
-          ⚠️ Bạn chưa được gán tổ kiểm phiếu nào
+      <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center max-w-md mx-auto mt-10 shadow-sm animate-fadeInDown">
+        <div className="text-4xl mb-3">⚠️</div>
+        <h3 className="text-xl font-bold text-red-700 mb-2">
+          Chưa được phân công
+        </h3>
+        <p className="text-red-600 text-sm">
+          Tài khoản của bạn hiện chưa được gán vào Tổ kiểm phiếu nào. <br />
+          Vui lòng liên hệ Admin để cấu hình!
         </p>
-      </Card>
+      </div>
     );
   }
 
@@ -74,7 +116,7 @@ export const AuditorVoting: React.FC = () => {
     mode: "FIXED_QUOTA" | "UNLIMITED",
     quota?: number,
   ) => {
-    const ballot = myTeam.ballots.find((b) => b.level === level);
+    const ballot = myTeam.ballots.find((b: any) => b.level === level);
     if (!ballot) return;
 
     setIsSubmitting(true);
@@ -99,9 +141,9 @@ export const AuditorVoting: React.FC = () => {
     }
   };
 
-  const handleCompleteTicket = () => {
+  const handleCompleteTicket = (phaseId: string, isValid: boolean) => {
     if (activePhaseId) {
-      completeTicket(activePhaseId);
+      completeTicket(activePhaseId, isValid);
     }
   };
 
@@ -110,9 +152,11 @@ export const AuditorVoting: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const success = completePhase(activePhaseId);
+      const success = await completePhase(activePhaseId);
       if (success) {
         setActivePhaseId("");
+        // ✅ CẬP NHẬT QUAN TRỌNG: Gọi lại API để tải số liệu mới nhất về màn hình ngoài
+        loadAssignmentData();
       }
     } finally {
       setIsSubmitting(false);
@@ -123,42 +167,45 @@ export const AuditorVoting: React.FC = () => {
     setActivePhaseId("");
   };
 
-  // View 1: Chọn loại & mode
+  // View 1: Màn hình chọn danh sách
   if (!activePhaseId) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Kiểm phiếu</h1>
-          <p className="text-gray-600 mt-2">
-            Chọn loại bầu cử để bắt đầu kiểm phiếu
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Khu vực Kiểm phiếu
+          </h1>
+          <p className="text-gray-500 mt-1 text-sm sm:text-base">
+            Xác nhận thông tin tổ và chọn danh sách để bắt đầu đếm
           </p>
         </div>
-
         <VotingInterface
           team={myTeam}
-          auditorId={String(user?.id || "")}
+          auditorId={user?.name || user?.email || "Người kiểm phiếu"}
           onStartPhase={handleStartPhase}
           isLoading={isSubmitting}
-          completedPhasesCount={myCompletedPhases.length}
+          completedPhasesCount={completedMappedPhases.length}
           totalBallotCount={myTotalBallotCount}
-          phases={phases.filter((p) => p.auditorId === String(user?.id || ""))}
+          phases={completedMappedPhases} // Truyền dữ liệu thật từ DB vào đây
         />
       </div>
     );
   }
 
-  // View 2: Đang kiểm phiếu
+  // View 2: Màn hình Đang đếm phiếu (Active Phase)
   if (activePhase && activeBallot) {
     return (
-      <ActivePhaseVoting
-        phase={activePhase}
-        ballot={activeBallot}
-        onToggleCandidate={handleToggleCandidate}
-        onCompleteTicket={handleCompleteTicket}
-        onComplete={handleCompletePhase}
-        onCancel={handleCancelPhase}
-        isSubmitting={isSubmitting}
-      />
+      <div className="max-w-4xl mx-auto">
+        <ActivePhaseVoting
+          phase={activePhase}
+          ballot={activeBallot}
+          onToggleCandidate={handleToggleCandidate}
+          onCompleteTicket={handleCompleteTicket}
+          onComplete={handleCompletePhase}
+          onCancel={handleCancelPhase}
+          isSubmitting={isSubmitting}
+        />
+      </div>
     );
   }
 

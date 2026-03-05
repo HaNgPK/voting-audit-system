@@ -25,20 +25,20 @@ export const LevelTabs: React.FC<LevelTabsProps> = ({
   ];
 
   return (
-    <div className="flex gap-1 sm:gap-2 bg-gray-100 p-1 rounded-lg overflow-x-auto">
+    <div className="flex p-1.5 bg-gray-200/60 border border-gray-200 rounded-xl w-full">
       {levels.map((level) => (
         <button
           key={level}
           onClick={() => onChange(level)}
           className={clsx(
-            "flex-1 py-2 sm:py-3 px-2 sm:px-4 rounded-md font-medium transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap text-xs sm:text-sm",
+            "flex-1 py-2.5 px-3 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 text-sm",
             activeLevel === level
-              ? "bg-white text-gray-900 shadow-md"
-              : "text-gray-600 hover:text-gray-900",
+              ? "bg-white text-blue-700 shadow-sm border border-gray-200/50"
+              : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50",
           )}
         >
-          <span>{LEVEL_INFO[level].icon}</span>
-          <span className="hidden sm:inline">{LEVEL_INFO[level].label}</span>
+          <span className="text-base">{LEVEL_INFO[level].icon}</span>
+          {LEVEL_INFO[level].label}
         </button>
       ))}
     </div>

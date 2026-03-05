@@ -1,17 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Button } from "@/src/components/common";
+import { Button } from "@/src/components/common";
 import { CancelPhaseModal } from "./CancelPhaseModal";
-import { CheckCircle, RotateCcw, Check } from "lucide-react";
+import { Check, AlertCircle, XCircle } from "lucide-react";
 import type { VotingPhase } from "@/src/data/mockVotingAssignments";
 import type { Ballot } from "@/src/data/mockElectionTeams";
 
 interface ActivePhaseVotingProps {
-  phase: VotingPhase;
+  phase: any;
   ballot: Ballot;
   onToggleCandidate: (candidateId: string) => void;
-  onCompleteTicket: () => void;
+  onCompleteTicket: (phaseId: string, isValid: boolean) => void;
   onComplete: () => void;
   onCancel: () => void;
   isSubmitting?: boolean;
@@ -35,221 +35,168 @@ export const ActivePhaseVoting: React.FC<ActivePhaseVotingProps> = ({
   const progress = isFixedQuota ? (ballotCount / quota) * 100 : 0;
   const canComplete = !isFixedQuota || ballotCount === quota;
   const currentTicket = phase.currentTicketVotes || {};
+
   const selectedInTicket = Object.keys(currentTicket).filter(
     (id) => currentTicket[id],
   );
+  const selectedCount = selectedInTicket.length;
 
-  // Chặn reload / đóng tab / navigate ra ngoài khi đang trong phiên
+  // NGHIỆP VỤ MAX SELECT
+  const maxSelect = (ballot as any).maxSelect || 1;
+  const isOverSelect = selectedCount > maxSelect;
+  const isBlank = selectedCount === 0;
+
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
-      e.returnValue =
-        "Bạn đang trong phiên kiểm phiếu. Thoát ra sẽ làm mất dữ liệu!";
+      e.returnValue = "Đang trong phiên đếm, thoát sẽ mất dữ liệu!";
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
-  // Handler: click nút Hủy → mở modal thay vì hủy thẳng
-  const handleCancelClick = () => {
-    setShowCancelModal(true);
-  };
-
-  // Handler: xác nhận hủy phiên (bỏ dữ liệu)
-  const handleForceCancel = () => {
-    setShowCancelModal(false);
-    onCancel();
-  };
-
-  // Handler: kết thúc & lưu (chỉ dùng cho UNLIMITED)
-  const handleCompleteFromModal = () => {
-    setShowCancelModal(false);
-    onComplete();
-  };
-
   return (
     <>
-      <div className="space-y-4">
+      <div className="space-y-6 animate-fadeIn">
         {/* Phase Header */}
-        <Card className="p-4 sm:p-6">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex-1 min-w-0 mr-3">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
-                📋 Phiên kiểm phiếu
-              </h3>
-              <p className="text-sm text-gray-600 mt-1 truncate">
-                {ballot.name}
+        <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+              📋 Đang kiểm phiếu
+            </h3>
+            <p className="text-gray-500 font-medium">{ballot.name}</p>
+          </div>
+          <div className="text-left sm:text-right w-full sm:w-auto">
+            <p className="text-3xl font-black text-blue-600">{ballotCount}</p>
+            <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+              phiếu đã hoàn tất
+            </p>
+            {isFixedQuota && (
+              <p className="text-xs text-gray-500 mt-1">
+                Được giao: {quota} phiếu
               </p>
-            </div>
-            <div className="text-right flex-shrink-0">
-              <p className="text-3xl font-bold text-blue-600">{ballotCount}</p>
-              <p className="text-xs text-gray-600">phiếu đã hoàn tất</p>
-            </div>
+            )}
+          </div>
+        </div>
+
+        {/* Khối Ticket (Tờ phiếu đang đếm) */}
+        <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border-2 border-blue-100">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+            <h4 className="text-lg font-bold text-gray-900">
+              🗳️ Đang nhập phiếu số #{ballotCount + 1}
+            </h4>
+            <span className="px-3 py-1 bg-blue-100 text-blue-700 font-bold rounded-lg text-xs sm:text-sm">
+              Chỉ tiêu: Chọn tối đa {maxSelect} người
+            </span>
           </div>
 
-          {isFixedQuota && (
-            <div className="space-y-1.5 mb-3">
-              <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-500 ${
-                    progress >= 100 ? "bg-green-500" : "bg-blue-500"
-                  }`}
-                  style={{ width: `${Math.min(progress, 100)}%` }}
-                />
-              </div>
-              <p className="text-sm font-medium text-gray-600">
-                {ballotCount} / {quota} phiếu
+          {/* Cảnh báo Phiếu Hỏng */}
+          {isOverSelect && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-red-700 text-sm font-medium animate-fadeIn">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <p>
+                Phiếu này tích chọn <strong>{selectedCount}</strong> người (vượt
+                quá {maxSelect}). Đây là <strong>PHIẾU HỎNG</strong>.
               </p>
             </div>
           )}
 
-          <div
-            className={isFixedQuota ? "" : "mt-3 pt-3 border-t border-gray-100"}
-          >
-            <span
-              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
-                isFixedQuota
-                  ? "bg-green-100 text-green-800"
-                  : "bg-blue-100 text-blue-800"
-              }`}
-            >
-              {isFixedQuota ? `📊 Được giao ${quota} phiếu` : "♾️ Tự do đếm"}
-            </span>
-          </div>
-        </Card>
-
-        {/* Current Ticket Card */}
-        <Card className="p-4 sm:p-6 border-2 border-blue-300 bg-blue-50">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h4 className="text-base sm:text-lg font-bold text-blue-900">
-                🗳️ Phiếu #{ballotCount + 1}
-              </h4>
-              <p className="text-xs sm:text-sm text-blue-700 mt-0.5">
-                Chọn ứng viên được bầu trong tờ phiếu này
-              </p>
-            </div>
-            <span className="flex-shrink-0 ml-2 px-2.5 py-1 bg-blue-200 text-blue-900 rounded-full text-xs sm:text-sm font-semibold">
-              {selectedInTicket.length} đã chọn
-            </span>
-          </div>
-
-          {/* Candidate list */}
-          <div className="space-y-2">
-            {candidates.map((candidate) => {
+          {/* Danh sách Ứng viên */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+            {candidates.map((candidate: any) => {
               const isSelected = !!currentTicket[candidate.id];
-              const accumulated = phase.votes[candidate.id] || 0;
               return (
                 <button
                   key={candidate.id}
                   onClick={() => onToggleCandidate(candidate.id)}
                   disabled={isSubmitting}
-                  className={`w-full text-left flex items-center gap-2.5 sm:gap-3 p-3 sm:p-4 rounded-lg border-2 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`w-full text-left flex items-center gap-3 p-3 sm:p-4 rounded-xl border-2 transition-all duration-150 ${
                     isSelected
-                      ? "border-blue-500 bg-white shadow-sm"
-                      : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50"
+                      ? isOverSelect
+                        ? "border-red-500 bg-red-50 text-red-900 shadow-sm"
+                        : "border-blue-500 bg-blue-50 text-blue-900 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-blue-300 hover:bg-gray-50 text-gray-700"
                   }`}
                 >
                   <div
-                    className={`flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded border-2 flex items-center justify-center transition-all ${
+                    className={`w-6 h-6 flex items-center justify-center rounded border ${
                       isSelected
-                        ? "bg-blue-500 border-blue-500"
+                        ? isOverSelect
+                          ? "bg-red-500 border-red-500 text-white"
+                          : "bg-blue-600 border-blue-600 text-white"
                         : "border-gray-300 bg-white"
                     }`}
                   >
                     {isSelected && (
-                      <Check className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                      <Check className="w-4 h-4" strokeWidth={3} />
                     )}
                   </div>
-                  <p className="flex-1 font-semibold text-gray-900 text-sm sm:text-base truncate">
+                  <span className="font-bold flex-1 text-sm sm:text-base">
                     {candidate.index}. {candidate.name}
-                  </p>
-                  <div className="flex-shrink-0 flex items-center gap-1.5">
-                    {isSelected && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                    )}
-                    <span
-                      className={`px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-bold transition-all ${
-                        isSelected
-                          ? "bg-blue-500 text-white"
-                          : accumulated > 0
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {accumulated}
-                    </span>
-                  </div>
+                  </span>
                 </button>
               );
             })}
           </div>
 
-          {/* Footer */}
-          <div className="mt-4 pt-4 border-t border-blue-200">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <p className="text-xs sm:text-sm text-blue-800 flex-1">
-                Sau khi chọn xong, nhấn <strong>Hoàn tất phiếu</strong> để ghi
-                nhận và chuyển sang phiếu tiếp theo.
-              </p>
-              <Button
-                onClick={onCompleteTicket}
-                variant="primary"
-                disabled={isSubmitting}
-                className="w-full sm:w-auto flex-shrink-0"
-              >
-                <CheckCircle className="w-4 h-4" />
-                Hoàn tất phiếu
-              </Button>
-            </div>
-          </div>
-        </Card>
+          {/* 2 Nút Xác nhận tờ phiếu */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100">
+            <button
+              onClick={() => onCompleteTicket(phase.id, true)}
+              disabled={isSubmitting || isOverSelect || isBlank}
+              className="flex-1 py-3.5 px-4 bg-green-500 hover:bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors text-sm sm:text-base shadow-sm"
+            >
+              <Check className="w-5 h-5" />
+              {isBlank ? "Hãy chọn ứng viên" : "Xác nhận Phiếu Hợp Lệ"}
+            </button>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-3">
-          {/* Nút Hủy → mở modal thay vì hủy thẳng */}
+            <button
+              onClick={() => onCompleteTicket(phase.id, false)}
+              disabled={isSubmitting}
+              className="flex-1 py-3.5 px-4 bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors border border-red-200 text-sm sm:text-base"
+            >
+              <XCircle className="w-5 h-5" />
+              Đánh dấu Phiếu Hỏng / Trắng
+            </button>
+          </div>
+        </div>
+
+        {/* Nút Kết Thúc Phiên */}
+        <div className="flex flex-col sm:flex-row justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200 gap-4">
           <Button
-            onClick={handleCancelClick}
             variant="danger"
+            onClick={() => setShowCancelModal(true)}
             disabled={isSubmitting}
-            className="flex-shrink-0"
+            className="w-full sm:w-auto"
           >
-            <RotateCcw className="w-4 h-4" />
-            <span className="hidden sm:inline">Hủy phiên</span>
-            <span className="sm:hidden">Hủy</span>
+            Hủy bỏ phiên
           </Button>
 
-          {!canComplete && isFixedQuota && (
-            <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-xs sm:text-sm text-amber-800 font-medium whitespace-nowrap">
-                Còn {quota - ballotCount} phiếu nữa
-              </p>
-            </div>
-          )}
-
           <Button
-            onClick={onComplete}
-            variant="success"
-            disabled={isSubmitting || !canComplete}
+            onClick={() => onComplete()}
+            disabled={!canComplete || isSubmitting}
             isLoading={isSubmitting}
-            className="ml-auto flex-shrink-0"
+            className="w-full sm:w-auto px-8 bg-gray-900 hover:bg-black text-white"
           >
-            <CheckCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">Hoàn thành phiên</span>
-            <span className="sm:hidden">Hoàn thành</span>
+            Lưu & Kết thúc phiên
           </Button>
         </div>
       </div>
 
-      {/* Cancel Confirmation Modal */}
       <CancelPhaseModal
         isOpen={showCancelModal}
         mode={phase.mode}
         ballotCount={ballotCount}
         quota={quota}
         onClose={() => setShowCancelModal(false)}
-        onForceCancel={handleForceCancel}
-        onComplete={handleCompleteFromModal}
+        onForceCancel={() => {
+          setShowCancelModal(false);
+          onCancel();
+        }}
+        onComplete={() => {
+          setShowCancelModal(false);
+          onComplete();
+        }}
       />
     </>
   );

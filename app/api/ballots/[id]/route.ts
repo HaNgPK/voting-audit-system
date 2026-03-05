@@ -1,18 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/prisma";
 
-// PUT: Đổi tên hoặc đổi cấp độ danh sách
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { name, level } = await req.json();
+    const { name, level, maxSelect } = await req.json(); // LẤY THÊM maxSelect
     const resolvedParams = await params;
 
     const updatedBallot = await prisma.ballot.update({
       where: { id: resolvedParams.id },
-      data: { name, level },
+      data: {
+        name,
+        level,
+        maxSelect: maxSelect ? Number(maxSelect) : 1, // CẬP NHẬT DB
+      },
       include: { candidates: { orderBy: { index: "asc" } } },
     });
 
@@ -25,17 +28,13 @@ export async function PUT(
   }
 }
 
-// DELETE: Xóa danh sách (Sẽ tự động xóa luôn các ứng viên bên trong nhờ onDelete: Cascade)
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const resolvedParams = await params;
-    await prisma.ballot.delete({
-      where: { id: resolvedParams.id },
-    });
-
+    await prisma.ballot.delete({ where: { id: resolvedParams.id } });
     return NextResponse.json({ success: true, message: "Đã xóa danh sách" });
   } catch (error) {
     return NextResponse.json(

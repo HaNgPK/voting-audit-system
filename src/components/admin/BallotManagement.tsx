@@ -26,7 +26,6 @@ const LEVEL_OPTIONS = [
 ];
 
 export const BallotManagement: React.FC = () => {
-  // ✅ Đã bổ sung importCandidates vào destructuring để tránh lỗi "không tìm thấy"
   const {
     ballots,
     isLoading,
@@ -39,13 +38,14 @@ export const BallotManagement: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isQuickConfigOpen, setIsQuickConfigOpen] = useState(false);
-  const [editingBallot, setEditingBallot] = useState<Ballot | null>(null);
+  const [editingBallot, setEditingBallot] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]); // ✅ State quản lý danh sách chọn
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     name: "",
     level: "QUOCHOI" as ElectionLevel,
+    maxSelect: 1,
   });
 
   const [quickConfigData, setQuickConfigData] = useState({
@@ -55,7 +55,8 @@ export const BallotManagement: React.FC = () => {
   });
 
   const [candidateModalOpen, setCandidateModalOpen] = useState(false);
-  const [managingBallot, setManagingBallot] = useState<Ballot | null>(null);
+  const [managingBallot, setManagingBallot] = useState<any>(null);
+  // Đã có sẵn gender trong form
   const [candidateForm, setCandidateForm] = useState({
     name: "",
     birthYear: "",
@@ -63,7 +64,6 @@ export const BallotManagement: React.FC = () => {
     index: 1,
   });
 
-  // --- ✅ 1. Logic Tải File Excel Mẫu ---
   const handleDownloadTemplate = () => {
     const templateData = [
       {
@@ -92,13 +92,9 @@ export const BallotManagement: React.FC = () => {
     toast.success("Đã tải file mẫu thành công!");
   };
 
-  // --- ✅ 2. Logic Chọn Checkbox ---
   const toggleSelectAll = () => {
-    if (selectedIds.length === filteredBallots.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(filteredBallots.map((b) => b.id));
-    }
+    if (selectedIds.length === filteredBallots.length) setSelectedIds([]);
+    else setSelectedIds(filteredBallots.map((b) => b.id));
   };
 
   const toggleSelectItem = (id: string) => {
@@ -107,35 +103,28 @@ export const BallotManagement: React.FC = () => {
     );
   };
 
-  // --- ✅ 3. Logic Xóa hàng loạt có điều kiện ---
   const handleBulkDelete = async () => {
     const selectedBallots = ballots.filter((b) => selectedIds.includes(b.id));
-
-    // Điều kiện: Chỉ cho phép xóa nếu danh sách có 0 ứng viên
     const hasCandidates = selectedBallots.some(
-      (b) => (b.candidates?.length || 0) > 0,
+      (b: any) => (b.candidates?.length || 0) > 0,
     );
 
-    if (hasCandidates) {
+    if (hasCandidates)
       return toast.error(
-        "Chặn xóa hàng loạt: Một số danh sách đã chọn có chứa ứng viên. Vui lòng xóa thủ công để tránh mất dữ liệu!",
+        "Có danh sách đang chứa ứng viên. Vui lòng xóa thủ công để tránh mất dữ liệu!",
       );
-    }
-
     if (!confirm(`Xóa ${selectedIds.length} đơn vị bầu cử đã chọn?`)) return;
 
     try {
-      // Xóa lần lượt qua API (Có thể nâng cấp API deleteMany sau này)
       await Promise.all(selectedIds.map((id) => deleteBallot(id)));
       setSelectedIds([]);
-      toast.success("Đã xóa các danh sách trống thành công!");
+      toast.success("Đã xóa hàng loạt thành công!");
       window.location.reload();
     } catch (error) {
       toast.error("Lỗi khi xóa hàng loạt.");
     }
   };
 
-  // --- Logic Xử lý Import Excel ---
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !managingBallot) return;
@@ -160,11 +149,7 @@ export const BallotManagement: React.FC = () => {
           managingBallot.id,
           formattedCandidates,
         );
-
         if (success) {
-          toast.success(
-            `Đã nhập thành công ${formattedCandidates.length} ứng viên!`,
-          );
           window.location.reload();
         }
       } catch (err) {
@@ -174,31 +159,17 @@ export const BallotManagement: React.FC = () => {
     reader.readAsArrayBuffer(file);
   };
 
-  // --- Logic Cấu hình nhanh ---
-  const handleQuickConfig = async () => {
-    try {
-      const res = await fetch("/api/ballots/quick-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(quickConfigData),
-      });
-      if (res.ok) {
-        toast.success("Cấu hình nhanh hoàn tất!");
-        setIsQuickConfigOpen(false);
-        window.location.reload();
-      }
-    } catch (error) {
-      toast.error("Lỗi cấu hình nhanh");
-    }
-  };
-
-  const handleOpenModal = (ballot?: Ballot) => {
-    if (ballot) {
+  const handleOpenModal = (ballot?: any) => {
+    if (ballot && !ballot.target && !ballot.nativeEvent) {
       setEditingBallot(ballot);
-      setFormData({ name: ballot.name, level: ballot.level as ElectionLevel });
+      setFormData({
+        name: ballot.name,
+        level: ballot.level as ElectionLevel,
+        maxSelect: ballot.maxSelect || 1,
+      });
     } else {
       setEditingBallot(null);
-      setFormData({ name: "", level: "XA" });
+      setFormData({ name: "", level: "XA", maxSelect: 1 });
     }
     setIsModalOpen(true);
   };
@@ -207,12 +178,14 @@ export const BallotManagement: React.FC = () => {
     e.preventDefault();
     if (!formData.name.trim())
       return toast.error("Tên danh sách không được để trống!");
+    if (formData.maxSelect < 1)
+      return toast.error("Số lượng chọn tối đa phải >= 1!");
 
     const result = await saveBallot(formData, editingBallot?.id);
     if (result) setIsModalOpen(false);
   };
 
-  const handleOpenCandidateModal = (ballot: Ballot) => {
+  const handleOpenCandidateModal = (ballot: any) => {
     setManagingBallot(ballot);
     const nextIndex = (ballot.candidates?.length || 0) + 1;
     setCandidateForm({
@@ -233,7 +206,6 @@ export const BallotManagement: React.FC = () => {
       ...candidateForm,
       ballotId: managingBallot?.id,
     });
-
     if (success) {
       setCandidateForm({
         ...candidateForm,
@@ -244,134 +216,129 @@ export const BallotManagement: React.FC = () => {
     }
   };
 
-  const filteredBallots = ballots.filter((b) =>
+  const filteredBallots = ballots.filter((b: any) =>
     b.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
-    <Card className="p-0 overflow-hidden animate-fadeInUp">
-      {/* Header & Toolbar */}
-      <div className="px-6 py-5 border-b border-gray-100 bg-white sticky top-0 z-10 shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              Quản lý Danh sách bầu cử
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">Hệ thống bầu cử 2026</p>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            Quản lý Danh sách bầu cử
+          </h2>
+          <p className="text-gray-500 text-sm mt-1">
+            Cấu hình Đơn vị bầu cử và Quy định bầu
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-none">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm danh sách..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-44"
+            />
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative mr-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-44"
-              />
-            </div>
-
-            {/* ✅ Nút Xóa hàng loạt - Chỉ hiện khi có chọn */}
-            {selectedIds.length > 0 && (
-              <button
-                onClick={handleBulkDelete}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all text-sm font-semibold border border-red-200"
-              >
-                <Trash2 className="w-4 h-4" /> Xóa ({selectedIds.length})
-              </button>
-            )}
-
+          {selectedIds.length > 0 && (
             <Button
-              onClick={() => setIsQuickConfigOpen(true)}
-              variant="secondary"
+              variant="danger"
+              size="sm"
+              onClick={handleBulkDelete}
               className="gap-2"
             >
-              <Zap className="w-4 h-4 text-amber-500" /> Cấu hình nhanh
+              <Trash2 className="w-4 h-4" /> Xóa ({selectedIds.length})
             </Button>
-            <Button onClick={() => handleOpenModal()} className="gap-2">
-              <Plus className="w-4 h-4" /> Thêm đơn vị
-            </Button>
-          </div>
+          )}
+          <Button onClick={() => handleOpenModal()} className="gap-2">
+            <Plus className="w-4 h-4" /> Thêm đơn vị
+          </Button>
         </div>
       </div>
 
-      {/* Table Section */}
       {isLoading ? (
-        <div className="p-12 text-center text-gray-400 animate-pulse">
-          Đang tải dữ liệu...
-        </div>
+        <Card className="p-8 text-center text-gray-500">
+          ⏳ Đang tải dữ liệu...
+        </Card>
       ) : (
-        <div className="overflow-x-auto max-h-[500px] overflow-y-auto shadow-inner relative">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-6 py-3.5 text-left w-10">
-                  <button
-                    onClick={toggleSelectAll}
-                    className="text-gray-400 hover:text-blue-600"
-                  >
-                    {selectedIds.length === filteredBallots.length &&
-                    filteredBallots.length > 0 ? (
-                      <CheckSquare className="w-5 h-5 text-blue-600" />
-                    ) : (
-                      <Square className="w-5 h-5" />
-                    )}
-                  </button>
-                </th>
-                {["Tên danh sách", "Cấp độ", "Ứng cử viên", "Thao tác"].map(
-                  (h) => (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-200">
+                  <th className="px-6 py-4 w-12 text-center">
+                    <button
+                      onClick={toggleSelectAll}
+                      className="text-gray-400 hover:text-blue-600 transition-colors"
+                    >
+                      {selectedIds.length === filteredBallots.length &&
+                      filteredBallots.length > 0 ? (
+                        <CheckSquare className="w-5 h-5 text-blue-600" />
+                      ) : (
+                        <Square className="w-5 h-5" />
+                      )}
+                    </button>
+                  </th>
+                  {[
+                    "Tên danh sách",
+                    "Cấp độ",
+                    "Chỉ tiêu bầu (max)",
+                    "Ứng cử viên",
+                    "Thao tác",
+                  ].map((h) => (
                     <th
                       key={h}
-                      className="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
+                      className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider"
                     >
                       {h}
                     </th>
-                  ),
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {filteredBallots.map((ballot) => {
-                const isSelected = selectedIds.includes(ballot.id);
-                return (
-                  <tr
-                    key={ballot.id}
-                    className={`${isSelected ? "bg-blue-50/50" : "hover:bg-gray-50"} transition-colors duration-150`}
-                  >
-                    <td className="px-6 py-4">
-                      <button
-                        onClick={() => toggleSelectItem(ballot.id)}
-                        className="text-gray-400 transition-colors"
-                      >
-                        {isSelected ? (
-                          <CheckSquare className="w-5 h-5 text-blue-600" />
-                        ) : (
-                          <Square className="w-5 h-5" />
-                        )}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="font-semibold text-gray-900 text-sm">
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredBallots.map((ballot: any) => {
+                  const isSelected = selectedIds.includes(ballot.id);
+                  return (
+                    <tr
+                      key={ballot.id}
+                      className={`hover:bg-gray-50/50 transition-colors ${isSelected ? "bg-blue-50/30" : ""}`}
+                    >
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => toggleSelectItem(ballot.id)}
+                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-5 h-5 text-blue-600" />
+                          ) : (
+                            <Square className="w-5 h-5" />
+                          )}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 font-medium text-gray-900">
                         {ballot.name}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-600">
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
                         {LEVEL_OPTIONS.find((l) => l.value === ballot.level)
                           ?.label || ballot.level}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => handleOpenCandidateModal(ballot)}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold hover:bg-blue-100 transition-colors"
-                      >
-                        <Users className="w-3 h-3" />
-                        {ballot.candidates?.length || 0} người
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end gap-1">
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-2.5 py-1 bg-amber-100 text-amber-800 font-bold rounded-md text-xs">
+                          Bầu tối đa: {ballot.maxSelect || 1}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => handleOpenCandidateModal(ballot)}
+                          className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold hover:bg-blue-100 transition-colors"
+                        >
+                          <Users className="w-3.5 h-3.5" />
+                          {ballot.candidates?.length || 0} người
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 flex gap-2">
                         <button
                           onClick={() => handleOpenCandidateModal(ballot)}
                           className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
@@ -393,66 +360,15 @@ export const BallotManagement: React.FC = () => {
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Modal Cấu hình nhanh */}
-      <Modal
-        isOpen={isQuickConfigOpen}
-        onClose={() => setIsQuickConfigOpen(false)}
-        title="⚡ Cấu hình nhanh Đơn vị bầu cử"
-      >
-        <div className="space-y-4">
-          <Select
-            label="Cấp độ bầu cử"
-            value={quickConfigData.level}
-            options={LEVEL_OPTIONS}
-            onChange={(e) =>
-              setQuickConfigData({
-                ...quickConfigData,
-                level: e.target.value as any,
-              })
-            }
-          />
-          <Input
-            label="Tên gốc của đơn vị"
-            value={quickConfigData.baseName}
-            onChange={(e) =>
-              setQuickConfigData({
-                ...quickConfigData,
-                baseName: e.target.value,
-              })
-            }
-          />
-          <Input
-            label="Số lượng đơn vị cần tạo"
-            type="number"
-            value={quickConfigData.quantity}
-            onChange={(e) =>
-              setQuickConfigData({
-                ...quickConfigData,
-                quantity: e.target.value,
-              })
-            }
-          />
-          <div className="pt-4 border-t flex justify-end gap-3 mt-4">
-            <Button
-              variant="secondary"
-              onClick={() => setIsQuickConfigOpen(false)}
-            >
-              Hủy
-            </Button>
-            <Button onClick={handleQuickConfig}>Bắt đầu tạo</Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
-      </Modal>
+        </Card>
+      )}
 
       {/* Modal Tạo/Sửa Đơn vị */}
       <Modal
@@ -478,7 +394,30 @@ export const BallotManagement: React.FC = () => {
             }
             options={LEVEL_OPTIONS}
           />
-          <div className="flex gap-3 justify-end pt-4 border-t mt-5">
+
+          <div className="bg-amber-50 p-3 border border-amber-200 rounded-lg">
+            <label className="block text-sm font-bold text-amber-800 mb-1">
+              Số lượng đại biểu được bầu (Bắt buộc)
+            </label>
+            <p className="text-xs text-amber-700 mb-2">
+              Quy định mỗi tờ phiếu được phép tích chọn tối đa bao nhiêu người.
+              Vượt quá số này sẽ bị tính là Phiếu Hỏng.
+            </p>
+            <input
+              type="number"
+              min="1"
+              value={formData.maxSelect}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  maxSelect: parseInt(e.target.value) || 1,
+                })
+              }
+              className="w-full px-3 py-2 border border-amber-300 rounded-md outline-none focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
             <Button
               type="button"
               variant="secondary"
@@ -486,7 +425,7 @@ export const BallotManagement: React.FC = () => {
             >
               Hủy bỏ
             </Button>
-            <Button type="submit" variant="primary">
+            <Button type="submit">
               {editingBallot ? "Lưu thay đổi" : "Tạo mới"}
             </Button>
           </div>
@@ -500,159 +439,157 @@ export const BallotManagement: React.FC = () => {
         title={`👥 Ứng viên: ${managingBallot?.name}`}
         size="lg"
       >
-        <div className="space-y-5">
-          {/* ✅ Section: Import & Download Mẫu Excel */}
-          <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex flex-col sm:flex-row justify-between items-center gap-3 shadow-sm">
+        <div className="space-y-6">
+          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
-              <p className="text-sm font-bold text-emerald-900 flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4" /> Công cụ Excel
-              </p>
-              <p className="text-xs text-emerald-600 mt-1">
-                Sử dụng file Excel để nhập liệu nhiều người một cách thần tốc.
+              <p className="font-bold text-emerald-800 flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5" /> Import bằng file Excel
               </p>
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
-              <button
+              <Button
+                type="button"
+                variant="secondary"
                 onClick={handleDownloadTemplate}
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-50 text-sm font-semibold shadow-sm transition-all"
+                className="flex-1 sm:flex-none bg-white text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-sm"
               >
                 <Download className="w-4 h-4" /> Tải mẫu
-              </button>
-              <label className="flex-1 sm:flex-none bg-emerald-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-emerald-700 text-sm font-semibold flex items-center justify-center gap-2 shadow-md transition-all">
-                Chọn file .xlsx
+              </Button>
+              <label className="flex-1 sm:flex-none bg-emerald-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-emerald-700 text-sm font-semibold flex items-center justify-center gap-2 transition-all">
+                Chọn file
                 <input
                   type="file"
+                  accept=".xlsx, .xls"
                   className="hidden"
-                  accept=".xlsx"
                   onChange={handleImportExcel}
                 />
               </label>
             </div>
           </div>
 
-          {/* Form Thêm Thủ Công */}
           <form
             onSubmit={handleAddCandidate}
-            className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3"
+            className="bg-gray-50 p-4 rounded-xl border border-gray-200"
           >
-            <p className="text-sm font-semibold text-gray-700">
-              Thêm ứng cử viên mới (Nhập tay)
+            <p className="font-bold text-gray-700 text-sm mb-3">
+              Hoặc thêm từng người:
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Input
-                label="Họ và tên"
-                value={candidateForm.name}
-                onChange={(e) =>
-                  setCandidateForm({ ...candidateForm, name: e.target.value })
-                }
-                placeholder="Nhập tên"
-              />
-              <Input
-                label="Năm sinh"
-                type="number"
-                value={candidateForm.birthYear}
-                onChange={(e) =>
-                  setCandidateForm({
-                    ...candidateForm,
-                    birthYear: e.target.value,
-                  })
-                }
-                placeholder="1980"
-              />
-              <Input
-                label="Số thứ tự"
-                type="number"
-                value={candidateForm.index}
-                onChange={(e) =>
-                  setCandidateForm({
-                    ...candidateForm,
-                    index: parseInt(e.target.value) || 1,
-                  })
-                }
-                min="1"
-              />
-            </div>
-            <div className="flex justify-end">
-              <Button type="submit" variant="primary" size="sm">
-                <Plus className="w-4 h-4 mr-1" /> Thêm
+
+            <div className="flex flex-col sm:flex-row gap-3 items-center">
+              {/* Lựa chọn giới tính */}
+              <div className="flex items-center gap-3 px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm h-10">
+                <label className="flex items-center gap-1 text-sm font-medium text-gray-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="Nam"
+                    checked={candidateForm.gender === "Nam"}
+                    onChange={(e) =>
+                      setCandidateForm({ ...candidateForm, gender: "Nam" })
+                    }
+                    className="accent-blue-600 w-4 h-4 cursor-pointer"
+                  />
+                  Ông
+                </label>
+                <label className="flex items-center gap-1 text-sm font-medium text-gray-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="Nữ"
+                    checked={candidateForm.gender === "Nữ"}
+                    onChange={(e) =>
+                      setCandidateForm({ ...candidateForm, gender: "Nữ" })
+                    }
+                    className="accent-pink-500 w-4 h-4 cursor-pointer"
+                  />
+                  Bà
+                </label>
+              </div>
+
+              {/* Tên và Năm sinh */}
+              <div className="flex-1 w-full">
+                <input
+                  type="text"
+                  className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={candidateForm.name}
+                  onChange={(e) =>
+                    setCandidateForm({ ...candidateForm, name: e.target.value })
+                  }
+                  placeholder="Họ và tên..."
+                />
+              </div>
+              <div className="w-full sm:w-28">
+                <input
+                  type="number"
+                  className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={candidateForm.birthYear}
+                  onChange={(e) =>
+                    setCandidateForm({
+                      ...candidateForm,
+                      birthYear: e.target.value,
+                    })
+                  }
+                  placeholder="Năm sinh"
+                />
+              </div>
+
+              <Button type="submit" className="w-full sm:w-auto h-10">
+                <Plus className="w-4 h-4" /> Thêm
               </Button>
             </div>
           </form>
 
-          {/* Table Ứng viên */}
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-2">
+            <p className="font-bold text-gray-800 mb-3">
               Danh sách ứng viên hiện tại
             </p>
-            <div className="max-h-[300px] overflow-y-auto border border-gray-200 rounded-lg shadow-inner bg-white">
-              <table className="w-full">
-                <thead className="bg-gray-50 sticky top-0 z-10">
+            <div className="border border-gray-200 rounded-lg overflow-hidden max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-gray-100 sticky top-0">
                   <tr>
                     {["STT", "Họ và tên", "Năm sinh", ""].map((h) => (
                       <th
                         key={h}
-                        className="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
+                        className="px-4 py-2 font-semibold text-gray-600"
                       >
                         {h}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 bg-white">
                   {(
-                    ballots.find((b) => b.id === managingBallot?.id)
+                    ballots.find((b: any) => b.id === managingBallot?.id)
                       ?.candidates || []
                   ).map((c: any) => (
-                    <tr
-                      key={c.id}
-                      className="hover:bg-blue-50/30 transition-colors"
-                    >
-                      <td className="px-4 py-2 text-sm font-bold text-gray-600">
+                    <tr key={c.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 font-medium text-gray-500">
                         {c.index}
                       </td>
-                      <td className="px-4 py-2 text-sm font-medium text-gray-800">
+                      <td className="px-4 py-2 font-medium">
+                        {/* THÊM DANH XƯNG ÔNG/BÀ Ở ĐÂY */}
+                        <span className="text-gray-500 font-normal mr-1">
+                          {c.gender === "Nữ" ? "Bà" : "Ông"}
+                        </span>
                         {c.name}
                       </td>
-                      <td className="px-4 py-2 text-sm text-gray-600">
-                        {c.birthYear}
-                      </td>
+                      <td className="px-4 py-2 text-gray-600">{c.birthYear}</td>
                       <td className="px-4 py-2 text-right">
                         <button
                           onClick={() => removeCandidate(c.id)}
                           className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-all"
-                          title="Xóa ứng viên"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
                   ))}
-                  {(!managingBallot?.candidates ||
-                    managingBallot.candidates.length === 0) && (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="p-8 text-center text-gray-400 text-xs italic"
-                      >
-                        Chưa có ứng viên nào trong danh sách
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
           </div>
-          <div className="flex justify-end pt-4 border-t">
-            <Button
-              type="button"
-              variant="primary"
-              onClick={() => setCandidateModalOpen(false)}
-            >
-              ✅ Hoàn thành & Đóng
-            </Button>
-          </div>
         </div>
       </Modal>
-    </Card>
+    </div>
   );
 };

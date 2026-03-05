@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/prisma";
 
-// GET: Lấy toàn bộ danh sách bầu cử (kèm theo ứng cử viên bên trong)
 export async function GET() {
   try {
     const ballots = await prisma.ballot.findMany({
       include: {
-        candidates: {
-          orderBy: { index: "asc" }, // Sắp xếp ứng viên theo số thứ tự
-        },
+        candidates: { orderBy: { index: "asc" } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -21,10 +18,9 @@ export async function GET() {
   }
 }
 
-// POST: Tạo danh sách bầu cử mới
 export async function POST(req: NextRequest) {
   try {
-    const { name, level } = await req.json();
+    const { name, level, maxSelect } = await req.json(); // LẤY THÊM maxSelect
 
     if (!name || !level) {
       return NextResponse.json(
@@ -34,13 +30,17 @@ export async function POST(req: NextRequest) {
     }
 
     const newBallot = await prisma.ballot.create({
-      data: { name, level },
+      data: {
+        name,
+        level,
+        maxSelect: maxSelect ? Number(maxSelect) : 1, // LƯU VÀO DB
+      },
       include: { candidates: true },
     });
 
     return NextResponse.json({
       success: true,
-      message: "Tạo danh sách thành công",
+      message: "Tạo thành công",
       data: newBallot,
     });
   } catch (error) {

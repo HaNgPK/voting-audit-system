@@ -59,7 +59,7 @@ model Ballot {
   candidates  Candidate[]
   teams       Team[]      @relation("TeamBallots")
   audits      Audit[]
-
+  maxSelect   Int         @default(1) // TỐI ĐA SỐ NGƯỜI ĐƯỢC CHỌN TRONG 1 PHIẾU
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -77,13 +77,29 @@ model Candidate {
   
   ballotId    String
   ballot      Ballot   @relation(fields: [ballotId], references: [id], onDelete: Cascade)
-  
+  votesCount  Int      @default(0) // TỔNG SỐ PHIẾU HỢP LỆ NHẬN ĐƯỢC
   createdAt   DateTime @default(now())
 
   @@unique([ballotId, index]) // Chống trùng số thứ tự trong cùng 1 danh sách
   @@map("candidates")
 }
-
+// 3. THÊM MỚI HOÀN TOÀN: Bảng lưu Lịch sử phiên kiểm phiếu
+model VotingSession {
+  id             String   @id @default(cuid())
+  teamId         String
+  auditorId      String
+  ballotId       String
+  mode           String   // "FIXED_QUOTA" | "UNLIMITED"
+  quota          Int?     // Số lượng giao (nếu có)
+  
+  totalBallots   Int      @default(0) // Tổng phiếu đã đếm
+  validBallots   Int      @default(0) // Số phiếu hợp lệ
+  invalidBallots Int      @default(0) // Số phiếu không hợp lệ (hỏng/trắng)
+  status         String   @default("COMPLETED")
+  
+  startTime      DateTime @default(now())
+  endTime        DateTime @updatedAt
+}
 // 5. CỬ TRI (Bảng mới)
 model Voter {
   id       String  @id @default(cuid())
